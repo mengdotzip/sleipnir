@@ -62,14 +62,32 @@ func privateKeyToPEM(priv ed25519.PrivateKey) (string, error) {
 
 //FUNCS
 
-func checkKey(pub string, pattern string) bool {
-	if strings.Contains(pub, pattern) {
-		return true
+func checkKey(pub string, cfg *Config) bool {
+	if cfg.IgnoreCase {
+		pub = strings.ToLower(pub)
 	}
+
+	switch cfg.Location {
+	case "anywhere":
+		if strings.Contains(pub, cfg.Pattern) {
+			return true
+		}
+	case "start":
+		if strings.HasPrefix(pub, cfg.Pattern) {
+			return true
+		}
+	case "end":
+		if strings.HasSuffix(pub, cfg.Pattern) {
+			return true
+		}
+	default:
+		fmt.Println("Only use 'anywhere,start or end' as location flags!")
+	}
+
 	return false
 }
 
-func cpu_gen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync.WaitGroup) {
+func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
@@ -86,7 +104,7 @@ func cpu_gen(ctx context.Context, cfg *Config, result chan *resultFound, wg *syn
 			}
 
 			pubString := publicKeyToSSHFormat(pub)
-			if checkKey(pubString, cfg.Pattern) {
+			if checkKey(pubString, cfg) {
 				privString, err := privateKeyToPEM(priv)
 				if err != nil {
 					fmt.Println(err)
@@ -133,7 +151,7 @@ func startGen(cfg *Config, wg *sync.WaitGroup) *resultFound {
 
 	for i := 0; i < cfg.Workers; i++ {
 		wg.Add(1)
-		go cpu_gen(ctx, cfg, result, wg)
+		go cpuGen(ctx, cfg, result, wg)
 	}
 
 	select {
