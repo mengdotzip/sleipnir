@@ -8,10 +8,12 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -33,17 +35,17 @@ func generateED25519Key() (ed25519.PrivateKey, ed25519.PublicKey, error) {
 	return priv, pub, nil
 }
 
-func publicKeyToSSHFormat(pub ed25519.PublicKey) string {
-	keyData := make([]byte, 0, 51)
+var sshEd25519Prefix = []byte{
+	0, 0, 0, 11, // length of "ssh-ed25519"
+	's', 's', 'h', '-', 'e', 'd', '2', '5', '5', '1', '9',
+	0, 0, 0, 32, // length of pubkey
+}
 
-	algName := "ssh-ed25519"
-	keyData = append(keyData, 0, 0, 0, 11)
-	keyData = append(keyData, []byte(algName)...)
+func publicKeyToSSHFormat(pub ed25519.PublicKey, buf []byte) string {
+	n := copy(buf, sshEd25519Prefix)
+	n += copy(buf[n:], pub)
 
-	keyData = append(keyData, 0, 0, 0, 32)
-	keyData = append(keyData, pub...)
-
-	return base64.StdEncoding.EncodeToString(keyData)
+	return base64.RawStdEncoding.EncodeToString(buf[:n])
 }
 
 func privateKeyToPEM(priv ed25519.PrivateKey) (string, error) {
@@ -89,6 +91,10 @@ func checkKey(pub string, cfg *Config) bool {
 
 func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	//each worker has 1 buffer (instead of making a new one every time)
+	buf := make([]byte, len(sshEd25519Prefix)+32)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -103,7 +109,7 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 				os.Exit(1)
 			}
 
-			pubString := publicKeyToSSHFormat(pub)
+			pubString := publicKeyToSSHFormat(pub, buf)
 			if checkKey(pubString, cfg) {
 				privString, err := privateKeyToPEM(priv)
 				if err != nil {
@@ -115,15 +121,69 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 				return
 			}
 
-			tries++
+			//I wanted to use atomic.AddUint64(&tries, 1) but that 2ns overhead just too much
+			atomic.AddUint64(&tries, 1)
 		}
 	}
 }
 
+func formatSeconds(sec float64) string {
+	if math.IsInf(sec, 0) {
+		return "∞"
+	}
+
+	days := int(sec) / 86400
+	sec -= float64(days * 86400)
+	hours := int(sec) / 3600
+	sec -= float64(hours * 3600)
+	mins := int(sec) / 60
+	sec -= float64(mins * 60)
+	return fmt.Sprintf("%dd %02dh %02dm %02ds", days, hours, mins, int(sec))
+}
+
+// I asked the ai for the formula, feel free to optimize this
+func estimateTries(pattern string, location string, ignoreCase bool) float64 {
+	const keyLen int = 43
+
+	n := len(pattern)
+	if n == 0 || keyLen < n {
+		return math.Inf(1)
+	}
+
+	charset := 64 // base64
+	if ignoreCase {
+		// roughly half the charset
+		charset = 32
+	}
+
+	// probability single position matches
+	p := math.Pow(1.0/float64(charset), float64(n))
+
+	positions := 1
+	switch location {
+	case "start", "end":
+		positions = 1
+	case "anywhere":
+		positions = keyLen - n + 1
+		if positions < 1 {
+			positions = 1
+		}
+	default:
+		positions = 1
+	}
+
+	// expected tries = 1 / (p * positions)
+	return 1.0 / (p * float64(positions))
+}
+
 func stats(ctx context.Context, cfg *Config) {
 	ticker := time.NewTicker(5 * time.Second)
+	start := time.Now()
 	defer ticker.Stop()
 	var oldTries uint64 = 0
+
+	expectedTries := estimateTries(cfg.Pattern, cfg.Location, cfg.IgnoreCase)
+	fmt.Printf("Expected tries: %v\n", expectedTries)
 
 	for {
 		select {
@@ -136,7 +196,8 @@ func stats(ctx context.Context, cfg *Config) {
 			deltaT := tries - oldTries
 			oldTries = tries
 			keysPS := deltaT / 5
-			fmt.Printf("Average keys per second: %v Total tries: %v\n", keysPS, tries)
+			etaSec := float64(expectedTries) / float64(keysPS)
+			fmt.Printf("Average keys per second: %v Total tries: %v Calculated wait time: %v/%v\n", keysPS, tries, formatSeconds(time.Since(start).Seconds()), formatSeconds(etaSec))
 		}
 	}
 }
