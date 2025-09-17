@@ -27,7 +27,7 @@ Basic Usage
 # Case-sensitive matching
 ./sleipnir -pattern MyName -ignore-case=false
 
-# Verbose logging
+# Verbose logging + PKCS#8 format private key
 ./sleipnir -pattern awesome -verbose
 ```
 
@@ -41,25 +41,31 @@ Sleipnir galloping with 12 workers...
 Hunting pattern: MENG
 Press Ctrl+C to stop
 Expected tries: 1.6777216e+07
-Average keys per second: 484188 Total tries: 2420946 Calculated wait time: 0d 00h 00m 05s/0d 00h 00m 34s
+Average keys per second: 482034 Total tries: 2410173 Calculated wait time: 0d 00h 00m 05s/0d 00h 00m 34s
+Average keys per second: 474232 Total tries: 4786627 Calculated wait time: 0d 00h 00m 10s/0d 00h 00m 35s
 ...
-Average keys per second: 479806 Total tries: 47987448 Calculated wait time: 0d 00h 01m 40s/0d 00h 00m 34s
-Made it in 49701882 tries
+Average keys per second: 481823 Total tries: 16834980 Calculated wait time: 0d 00h 00m 35s/0d 00h 00m 34s
+Made it in 18841452 tries
 
 KEY FOUND :)!
-Private Key:
------BEGIN PRIVATE KEY-----
+OpenSSH Private Key:
+-----BEGIN OPENSSH PRIVATE KEY-----
 Removed so nobody would actually use this key :p
------END PRIVATE KEY-----
+-----END OPENSSH PRIVATE KEY-----
 
 Public Key:
-AAAAC3NzaC1lZDI1NTE5AAAAIN1ApPRkQ17fpv812nKS5BeDalJ03/V83QNkzS+UMENG
+AAAAC3NzaC1lZDI1NTE5AAAAIK+p9TNjWPHhV55/4LABlUapaCD0jHgPUrsfjdOkMENG
 All goroutines closed successfully
 ```
+**NOTE** If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
 
 ## Tests
-You can run:
+Benchmark the speed of the ssh keygen per core:
 ```
 go test -bench .
 ```
-To benchmark the speed of the ssh keygen per core.
+
+Test if we are generating valid ssh keys:
+```
+go test -v
+```
