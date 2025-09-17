@@ -33,7 +33,7 @@ func main() {
 		fmt.Println("Sleipnir - Vanity SSH Key Generator")
 		fmt.Println("\nUsage: sleipnir -pattern <string>")
 		fmt.Println("\nExamples:")
-		fmt.Println("  sleipnir -pattern cool -location anywhere  # Find 'cool' anywhere in key")
+		fmt.Println("sleipnir -pattern cool -location anywhere  # Find 'cool' anywhere in key")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -63,7 +63,11 @@ func main() {
 	var wg sync.WaitGroup
 	result := startGen(config, &wg)
 	if result != nil {
-		fmt.Printf("\nKEY FOUND :)!\nPrivate Key:\n%v\nPublic Key:\n%v\n", result.priv, result.pub)
+		fmt.Printf("\nKEY FOUND :)!\n")
+		if config.Verbose {
+			fmt.Printf("PKCS#8 Private Key:\n%v\n", result.priv)
+		}
+		fmt.Printf("OpenSSH Private Key:\n%v\nPublic Key:\n%v\n", result.privOpenSSH, result.pub)
 	}
 	wg.Wait()
 	fmt.Println("All goroutines closed successfully")

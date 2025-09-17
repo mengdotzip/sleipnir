@@ -16,13 +16,16 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 var tries uint64 = 0
 
 type resultFound struct {
-	pub  string
-	priv string
+	pub         string
+	priv        string
+	privOpenSSH string
 }
 
 //SSH GEN
@@ -46,6 +49,16 @@ func publicKeyToSSHFormat(pub ed25519.PublicKey, buf []byte) string {
 	n += copy(buf[n:], pub)
 
 	return base64.RawStdEncoding.EncodeToString(buf[:n])
+}
+
+func privateKeyToOpenSSH(priv ed25519.PrivateKey, comment string) (string, error) {
+	block, err := ssh.MarshalPrivateKey(priv, comment)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert PEM block to bytes, then to string
+	return string(pem.EncodeToMemory(block)), nil
 }
 
 func privateKeyToPEM(priv ed25519.PrivateKey) (string, error) {
@@ -84,6 +97,7 @@ func checkKey(pub string, cfg *Config) bool {
 		}
 	default:
 		fmt.Println("Only use 'anywhere,start or end' as location flags!")
+		os.Exit(1)
 	}
 
 	return false
@@ -106,6 +120,7 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 			priv, pub, err := generateED25519Key()
 			if err != nil {
 				fmt.Println(err)
+				ctx.Done()
 				os.Exit(1)
 			}
 
@@ -114,10 +129,18 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 				privString, err := privateKeyToPEM(priv)
 				if err != nil {
 					fmt.Println(err)
+					ctx.Done()
 					os.Exit(1)
 				}
+				privOpenSSH, err := privateKeyToOpenSSH(priv, "")
+				if err != nil {
+					fmt.Println(err)
+					ctx.Done()
+					os.Exit(1)
+				}
+
 				fmt.Printf("Made it in %v tries\n", tries)
-				result <- &resultFound{pubString, privString}
+				result <- &resultFound{pubString, privString, privOpenSSH}
 				return
 			}
 
