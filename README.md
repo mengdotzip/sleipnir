@@ -60,7 +60,7 @@ All goroutines closed successfully
 **NOTE** If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
 
 ## Tests
-Benchmark the speed of the ssh keygen per core:
+Benchmark the speed of the ssh keygen per core and the Sleipnir keys/s:
 ```
 go test -bench .
 ```
@@ -72,8 +72,9 @@ go test -v
 
 ## Benchmarks
 ```
-13th Gen Intel(R) Core(TM) i7-13700K -> ~1M   keys/s
-AMD Ryzen 9 7950X 16-Core            -> ~920k keys/s
-AMD Ryzen 5 7600X 6-Core             -> ~500K keys/s
-Apple M1                             -> ~280k keys/s
+Intel Core i7-13700K      -> ~1M   keys/s | OS: Windows 11 23H2
+AMD Ryzen 9 7950X         -> ~920k keys/s | OS: Fedora Linux 42
+AMD Ryzen 7 7800x3d       -> ~570K keys/s | OS: Fedora Linux 42
+AMD Ryzen 5 7600X         -> ~500K keys/s | OS: Debian Linux 12
+Apple M1                  -> ~280k keys/s | OS: macos 26
 ```

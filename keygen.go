@@ -152,7 +152,6 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 				return
 			}
 
-			//I wanted to use atomic.AddUint64(&tries, 1) but that 2ns overhead just too much
 			atomic.AddUint64(&tries, 1)
 		}
 	}
