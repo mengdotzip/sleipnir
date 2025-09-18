@@ -11,8 +11,9 @@ Basic Usage
 # Find "cool" anywhere in the SSH key
 ./sleipnir -pattern cool
 
-# Find key starting with "AAAA"
-./sleipnir -pattern AAAA -location start
+# Find key starting with "Hi". Keep in mind that the starting string "AAAAC3NzaC1lZDI1NTE5AAAAI" is static
+# sleipnir will only start searching after that.
+./sleipnir -pattern Hi -location start
 
 # Find key ending with "1337" OR "meng" OR "github"
 ./sleipnir -pattern 1337,meng,github -location end
@@ -71,10 +72,12 @@ go test -v
 ```
 
 ## Benchmarks
-```
-Intel Core i7-13700K      -> ~1M   keys/s | OS: Windows 11 23H2
-AMD Ryzen 9 7950X         -> ~920k keys/s | OS: Fedora Linux 42
-AMD Ryzen 7 7800x3d       -> ~570K keys/s | OS: Fedora Linux 42
-AMD Ryzen 5 7600X         -> ~500K keys/s | OS: Debian Linux 12
-Apple M1                  -> ~280k keys/s | OS: macos 26
-```
+
+| CPU                  |keys/s | OS              |
+|:---------------------|:-----:|:----------------|
+| Intel Core i7-13700K | ~1M   | Windows 11 23H2 |
+| AMD Ryzen 9 7950X    | ~920k | Fedora Linux 42 |
+| AMD Ryzen 7 7800x3d  | ~570K | Fedora Linux 42 |
+| AMD Ryzen 5 7600X    | ~500K | Debian Linux 12 |
+| Apple M1             | ~280k | macOS 26        |
+| lx2160a A72          | ~143K | Fedora Linux 42 |

@@ -92,8 +92,9 @@ func checkKey(pub string, cfg *Config) bool {
 			}
 		}
 	case "start":
+		pubVar := pub[25:]
 		for _, pattern := range cfg.Patterns {
-			if strings.HasPrefix(pub, pattern) {
+			if strings.HasPrefix(pubVar, pattern) {
 				return true
 			}
 		}

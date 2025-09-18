@@ -70,7 +70,7 @@ func main() {
 		if config.Verbose {
 			fmt.Printf("PKCS#8 Private Key:\n%v\n", result.priv)
 		}
-		fmt.Printf("OpenSSH Private Key:\n%v\nPublic Key:\n%v\n", result.privOpenSSH, result.pub)
+		fmt.Printf("OpenSSH Private Key:\n%v\nPublic Key:\nssh-ed25519 %v\n", result.privOpenSSH, result.pub)
 	}
 	wg.Wait()
 	fmt.Println("All goroutines closed successfully")
