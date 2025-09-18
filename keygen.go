@@ -82,18 +82,26 @@ func checkKey(pub string, cfg *Config) bool {
 		pub = strings.ToLower(pub)
 	}
 
+	//I put 3 for loops in each case instead of 1 encapsulating the switch statement
+	//This should save time (i hope) :)
 	switch cfg.Location {
 	case "anywhere":
-		if strings.Contains(pub, cfg.Pattern) {
-			return true
+		for _, pattern := range cfg.Patterns {
+			if strings.Contains(pub, pattern) {
+				return true
+			}
 		}
 	case "start":
-		if strings.HasPrefix(pub, cfg.Pattern) {
-			return true
+		for _, pattern := range cfg.Patterns {
+			if strings.HasPrefix(pub, pattern) {
+				return true
+			}
 		}
 	case "end":
-		if strings.HasSuffix(pub, cfg.Pattern) {
-			return true
+		for _, pattern := range cfg.Patterns {
+			if strings.HasSuffix(pub, pattern) {
+				return true
+			}
 		}
 	default:
 		fmt.Println("Only use 'anywhere,start or end' as location flags!")
@@ -165,38 +173,56 @@ func formatSeconds(sec float64) string {
 }
 
 // I asked the ai for the formula, feel free to optimize this
-func estimateTries(pattern string, location string, ignoreCase bool) float64 {
-	const keyLen int = 43
-
-	n := len(pattern)
-	if n == 0 || keyLen < n {
+func estimateTries(patterns []string, location string, ignoreCase bool) float64 {
+	if len(patterns) == 0 {
 		return math.Inf(1)
 	}
 
-	charset := 64 // base64
+	const keyLen = 43
+	charset := 64.0
 	if ignoreCase {
-		// roughly half the charset
-		charset = 32
+		charset = 32.0
 	}
 
-	// probability single position matches
-	p := math.Pow(1.0/float64(charset), float64(n))
-
-	positions := 1
+	// Calculate positions based on location
+	var positions int
 	switch location {
 	case "start", "end":
 		positions = 1
 	case "anywhere":
-		positions = keyLen - n + 1
+		// Use shortest pattern for position calculation
+		minLen := len(patterns[0])
+		for _, p := range patterns {
+			if len(p) < minLen {
+				minLen = len(p)
+			}
+		}
+		positions = keyLen - minLen + 1
 		if positions < 1 {
 			positions = 1
 		}
-	default:
-		positions = 1
 	}
 
-	// expected tries = 1 / (p * positions)
-	return 1.0 / (p * float64(positions))
+	// Calculate individual probabilities
+	var combinedProb float64
+
+	// Use: P(A or B or C) = 1 - P(not A and not B and not C)
+	// P(not A and not B and not C) = (1-P(A)) * (1-P(B)) * (1-P(C))
+	probNone := 1.0
+
+	for _, pattern := range patterns {
+		// Individual pattern probability
+		patternProb := math.Pow(1.0/charset, float64(len(pattern))) * float64(positions)
+		probNone *= (1.0 - patternProb)
+	}
+
+	combinedProb = 1.0 - probNone
+
+	if combinedProb <= 0 {
+		return math.Inf(1)
+	}
+
+	return 1.0 / combinedProb
 }
 
 func stats(ctx context.Context, cfg *Config) {
@@ -205,7 +231,7 @@ func stats(ctx context.Context, cfg *Config) {
 	defer ticker.Stop()
 	var oldTries uint64 = 0
 
-	expectedTries := estimateTries(cfg.Pattern, cfg.Location, cfg.IgnoreCase)
+	expectedTries := estimateTries(cfg.Patterns, cfg.Location, cfg.IgnoreCase)
 	fmt.Printf("Expected tries: %v\n", expectedTries)
 
 	for {
@@ -220,7 +246,7 @@ func stats(ctx context.Context, cfg *Config) {
 			oldTries = tries
 			keysPS := deltaT / 5
 			etaSec := float64(expectedTries) / float64(keysPS)
-			fmt.Printf("Average keys per second: %v Total tries: %v Calculated wait time: %v/%v\n", keysPS, tries, formatSeconds(time.Since(start).Seconds()), formatSeconds(etaSec))
+			fmt.Printf("|Average keys per second: %v| |Total tries: %v| |Calculated wait time: %v/%v|\n", keysPS, tries, formatSeconds(time.Since(start).Seconds()), formatSeconds(etaSec))
 		}
 	}
 }

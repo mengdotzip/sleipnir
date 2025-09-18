@@ -14,8 +14,8 @@ Basic Usage
 # Find key starting with "AAAA"
 ./sleipnir -pattern AAAA -location start
 
-# Find key ending with "1337"
-./sleipnir -pattern 1337 -location end
+# Find key ending with "1337" OR "meng" OR "github"
+./sleipnir -pattern 1337,meng,github -location end
 ```
 
 ### Advanced Options
@@ -73,5 +73,7 @@ go test -v
 ## Benchmarks
 ```
 13th Gen Intel(R) Core(TM) i7-13700K -> ~1M   keys/s
+AMD Ryzen 9 7950X 16-Core            -> ~920k keys/s
 AMD Ryzen 5 7600X 6-Core             -> ~500K keys/s
+Apple M1                             -> ~280k keys/s
 ```

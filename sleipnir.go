@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	Pattern    string
+	Patterns   []string
 	Workers    int
 	Location   string
 	IgnoreCase bool
@@ -20,7 +20,7 @@ type Config struct {
 
 func main() {
 	var (
-		pattern    = flag.String("pattern", "", "Pattern to match in public key")
+		pattern    = flag.String("pattern", "", "Pattern(s) to match in public key")
 		workers    = flag.Int("workers", runtime.NumCPU(), "Number of CPU workers")
 		location   = flag.String("location", "anywhere", "Search 'anywhere/start/end' of the public key")
 		ignoreCase = flag.Bool("ignore-case", true, "Case insensitive matching")
@@ -34,30 +34,33 @@ func main() {
 		fmt.Println("\nUsage: sleipnir -pattern <string>")
 		fmt.Println("\nExamples:")
 		fmt.Println("sleipnir -pattern cool -location anywhere  # Find 'cool' anywhere in key")
+		fmt.Println("sleipnir -pattern cool,MENG -location end  # Find 'cool'or'MENG' at the end of the key")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	if *location == "" {
+		//Technically we should never enter this function, but you never know.
 		fmt.Println("UNKOWN: Use '-location start,end or anywhere'")
 		os.Exit(1)
 	}
+
+	if *ignoreCase {
+		*pattern = strings.ToLower(*pattern)
+	}
+	patterns := strings.Split(*pattern, ",")
 
 	fmt.Printf("Sleipnir galloping with %d workers...\n", *workers)
 	fmt.Printf("Hunting pattern: %v\n", *pattern)
 	fmt.Println("Press Ctrl+C to stop")
 
 	config := &Config{
-		Pattern:    *pattern,
+		Patterns:   patterns,
 		Workers:    *workers,
 		Location:   *location,
 		IgnoreCase: *ignoreCase,
 		Stream:     *stream,
 		Verbose:    *verbose,
-	}
-
-	if config.IgnoreCase {
-		config.Pattern = strings.ToLower(config.Pattern)
 	}
 
 	var wg sync.WaitGroup
