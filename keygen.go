@@ -10,11 +10,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"os/signal"
 	"strings"
-	"sync"
-	"sync/atomic"
-	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -112,66 +108,6 @@ func checkKey(pub string, cfg *Config) bool {
 	return false
 }
 
-func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	//each worker has 1 buffer (instead of making a new one every time)
-	buf := make([]byte, len(sshEd25519Prefix)+32)
-
-	for {
-		select {
-		case <-ctx.Done():
-			if cfg.Verbose {
-				fmt.Println("stopping cpu loop")
-			}
-			return
-		default:
-			priv, pub, err := generateED25519Key()
-			if err != nil {
-				fmt.Println(err)
-				ctx.Done()
-				os.Exit(1)
-			}
-
-			pubString := publicKeyToSSHFormat(pub, buf)
-			if checkKey(pubString, cfg) {
-				privString, err := privateKeyToPEM(priv)
-				if err != nil {
-					fmt.Println(err)
-					ctx.Done()
-					os.Exit(1)
-				}
-				privOpenSSH, err := privateKeyToOpenSSH(priv, "")
-				if err != nil {
-					fmt.Println(err)
-					ctx.Done()
-					os.Exit(1)
-				}
-
-				fmt.Printf("Made it in %v tries\n", tries)
-				result <- &resultFound{pubString, privString, privOpenSSH}
-				return
-			}
-
-			atomic.AddUint64(&tries, 1)
-		}
-	}
-}
-
-func formatSeconds(sec float64) string {
-	if math.IsInf(sec, 0) {
-		return "∞"
-	}
-
-	days := int(sec) / 86400
-	sec -= float64(days * 86400)
-	hours := int(sec) / 3600
-	sec -= float64(hours * 3600)
-	mins := int(sec) / 60
-	sec -= float64(mins * 60)
-	return fmt.Sprintf("%dd %02dh %02dm %02ds", days, hours, mins, int(sec))
-}
-
 // I asked the ai for the formula, feel free to optimize this
 func estimateTries(patterns []string, location string, ignoreCase bool) float64 {
 	if len(patterns) == 0 {
@@ -249,27 +185,4 @@ func stats(ctx context.Context, cfg *Config) {
 			fmt.Printf("|Average keys per second: %v| |Total tries: %v| |Calculated wait time: %v/%v|\n", keysPS, tries, formatSeconds(time.Since(start).Seconds()), formatSeconds(etaSec))
 		}
 	}
-}
-
-func startGen(cfg *Config, wg *sync.WaitGroup) *resultFound {
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	result := make(chan *resultFound, 1)
-	go stats(ctx, cfg)
-
-	for i := 0; i < cfg.Workers; i++ {
-		wg.Add(1)
-		go cpuGen(ctx, cfg, result, wg)
-	}
-
-	select {
-	case foundResult := <-result:
-		stop()
-		return foundResult
-	case <-ctx.Done():
-		return nil
-	}
-
 }
