@@ -22,8 +22,15 @@ Basic Usage
 ### Advanced Options
 
 ```bash
-# Use specific number of workers
+# Use specific number of workers, by default we use all threads
 ./sleipnir -pattern github -workers 16
+
+# Continue even when a key is found 
+# I strongly suggest also using -output when using stream
+./sleipnir -pattern mari -stream
+
+# Output the found key to the specified file
+./sleipnir -pattern xmr -output test.txt
 
 # Case-sensitive matching
 ./sleipnir -pattern MyName -ignore-case=false
@@ -38,15 +45,15 @@ Basic Usage
 ./sleipnir -pattern MENG -location end -ignore-case=false
 ```
 ```
-Sleipnir galloping with 12 workers...
+Sleipnir galloping with 24 workers...
 Hunting pattern: MENG
 Press Ctrl+C to stop
 Expected tries: 1.6777216e+07
-Average keys per second: 482034 Total tries: 2410173 Calculated wait time: 0d 00h 00m 05s/0d 00h 00m 34s
-Average keys per second: 474232 Total tries: 4786627 Calculated wait time: 0d 00h 00m 10s/0d 00h 00m 35s
+|Average keys per second: 977558| |Total tries: 4887855| |Calculated wait time: 0d 00h 00m 05s/0d 00h 00m 17s|
+|Average keys per second: 975424| |Total tries: 9764953| |Calculated wait time: 0d 00h 00m 10s/0d 00h 00m 17s|
 ...
-Average keys per second: 481823 Total tries: 16834980 Calculated wait time: 0d 00h 00m 35s/0d 00h 00m 34s
-Made it in 18841452 tries
+|Average keys per second: 979482| |Total tries: 29326450| |Calculated wait time: 0d 00h 00m 30s/0d 00h 00m 17s|
+Made it in 33054311 tries
 
 KEY FOUND :)!
 OpenSSH Private Key:
@@ -55,8 +62,9 @@ Removed so nobody would actually use this key :p
 -----END OPENSSH PRIVATE KEY-----
 
 Public Key:
-AAAAC3NzaC1lZDI1NTE5AAAAIK+p9TNjWPHhV55/4LABlUapaCD0jHgPUrsfjdOkMENG
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII44C87jrgvZi/pkNUVpwb0jlnUGXkiUu+/RMS5wMENG
 All goroutines closed successfully
+
 ```
 **NOTE** If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
 
