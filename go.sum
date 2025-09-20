@@ -1,3 +1,7 @@
+github.com/CyberChainXyz/go-opencl v0.0.0-20241229131621-216260c11a44 h1:M6pl2+obPz3x+8o8Ks4j75+5Dcv+iLnyKw7tQtKwZNA=
+github.com/CyberChainXyz/go-opencl v0.0.0-20241229131621-216260c11a44/go.mod h1:BJYH3zDxxh9eJk3mSAT/XUB9tnhfOBsLDxLYSK7T6Jk=
+github.com/samuel/go-opencl v0.0.0-20171108220231-cbcfd10c32ad h1:zyvTnsJPPAqVg2v3bbvTI+RdbVPJufZ+CWCPOX0Dtp8=
+github.com/samuel/go-opencl v0.0.0-20171108220231-cbcfd10c32ad/go.mod h1:KCqoxhWgoxCWg13iOq53YFf50jlonuuhIpO916aWEkg=
 golang.org/x/crypto v0.42.0 h1:chiH31gIWm57EkTXpwnqf8qeuMUi0yekh6mT2AvFlqI=
 golang.org/x/crypto v0.42.0/go.mod h1:4+rDnOTJhQCx2q7/j6rAN5XDw8kPjeaXEUR2eL94ix8=
 golang.org/x/sys v0.36.0 h1:KVRy2GtZBrk1cBYA7MKu5bEZFxQk4NIDV6RLVcC8o0k=

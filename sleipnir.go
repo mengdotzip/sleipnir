@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sleipnir/gpu"
 	"strings"
 	"sync"
 	"syscall"
@@ -20,6 +21,7 @@ type Config struct {
 	Stream     bool
 	Output     string
 	Verbose    bool
+	UseGpu     bool
 }
 
 func main() {
@@ -33,6 +35,7 @@ func main() {
 		stream     = flag.Bool("stream", false, "Keep finding matches (streaming mode)")
 		output     = flag.String("output", "", "Write found keys to a file")
 		verbose    = flag.Bool("verbose", false, "verbose logging")
+		useGpu     = flag.Bool("gpu", false, "Use your GPU for generation")
 	)
 	flag.Parse()
 
@@ -47,7 +50,7 @@ func main() {
 	}
 
 	if *location == "" {
-		//Technically we should never enter this function, but you never know.
+		// Technically we should never enter this function, but you never know.
 		fmt.Println("UNKOWN: Use '-location start,end or anywhere'")
 		os.Exit(1)
 	}
@@ -69,6 +72,7 @@ func main() {
 		Stream:     *stream,
 		Output:     *output,
 		Verbose:    *verbose,
+		UseGpu:     *useGpu,
 	}
 	//------------
 
@@ -77,6 +81,21 @@ func main() {
 	fmt.Println("Press Ctrl+C to stop")
 
 	var wg sync.WaitGroup
+	if config.UseGpu {
+		fmt.Println("Testing OpenCL setup...")
+
+		found, err := gpu.FindVanityKeysGPU(config.Patterns, config.Location, config.IgnoreCase)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("GPU found key:%v\n", found.PublicKey)
+		buf := make([]byte, len(sshEd25519Prefix)+32)
+		fmt.Printf("GPU found key:%v\n", publicKeyToSSHFormat(found.PublicKey, buf))
+
+		return
+	}
+
 	if !config.Stream {
 		foundResult := startGen(config, &wg)
 		printResult(foundResult, config)

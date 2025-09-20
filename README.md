@@ -1,6 +1,6 @@
-# Sleipnir - Lightning-Fast Vanity SSH Key Generator
+# Sleipnir - Super Fast Vanity SSH Key Generator
 
-Sleipnir is a blazing-fast vanity SSH key generator written in Go, capable of generating **1,000,000+** ED25519 keys per second on modern hardware. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH keys.
+Sleipnir is a super fast cross-platform vanity SSH key generator written in Go, capable of generating **1,000,000+** ED25519 keys per second on modern hardware. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH keys.
 
 
 

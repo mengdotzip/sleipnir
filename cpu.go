@@ -11,7 +11,7 @@ import (
 func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	//each worker has 1 buffer (instead of making a new one every time)
+	// each worker has 1 buffer (instead of making a new one every time)
 	buf := make([]byte, len(sshEd25519Prefix)+32)
 
 	for {
