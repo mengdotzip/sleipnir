@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"sleipnir/gpu"
 	"strings"
 	"sync"
 	"syscall"
@@ -22,6 +21,7 @@ type Config struct {
 	Output     string
 	Verbose    bool
 	UseGpu     bool
+	BatchSize  int
 }
 
 func main() {
@@ -36,6 +36,7 @@ func main() {
 		output     = flag.String("output", "", "Write found keys to a file")
 		verbose    = flag.Bool("verbose", false, "verbose logging")
 		useGpu     = flag.Bool("gpu", false, "Use your GPU for generation")
+		batchSize  = flag.Int("Batch Size", 65536, "Amount of workers per gpu call")
 	)
 	flag.Parse()
 
@@ -73,6 +74,7 @@ func main() {
 		Output:     *output,
 		Verbose:    *verbose,
 		UseGpu:     *useGpu,
+		BatchSize:  *batchSize,
 	}
 	//------------
 
@@ -82,21 +84,15 @@ func main() {
 
 	var wg sync.WaitGroup
 	if config.UseGpu {
-		fmt.Println("Testing OpenCL setup...")
-
-		found, err := gpu.FindVanityKeysGPU(config.Patterns, config.Location, config.IgnoreCase)
+		fmt.Println("WARNING: GPU is still in TESTING only -location end works")
+		found, err := findVanityKeysGPU(config)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Printf("GPU found key:%v\n", found.PublicKey)
-		buf := make([]byte, len(sshEd25519Prefix)+32)
-		fmt.Printf("GPU found key:%v\n", publicKeyToSSHFormat(found.PublicKey, buf))
-
+		printResult(found, config)
 		return
-	}
-
-	if !config.Stream {
+	} else if !config.Stream {
 		foundResult := startGen(config, &wg)
 		printResult(foundResult, config)
 		if config.Output != "" {

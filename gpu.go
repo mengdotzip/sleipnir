@@ -1,36 +1,44 @@
-package gpu
+package main
 
 import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	cl "github.com/CyberChainXyz/go-opencl"
 )
 
-type GPUResult struct {
-	PublicKey  ed25519.PublicKey
-	PrivateKey ed25519.PrivateKey
-	SSHKey     string
-}
-
-type GPUConfig struct {
-	Patterns   []string
-	Location   string
-	IgnoreCase bool
-	BatchSize  int // Keys to generate per GPU call
-}
-
-func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GPUResult, error) {
-	config := GPUConfig{
-		Patterns:   patterns,
-		Location:   location,
-		IgnoreCase: ignoreCase,
-		BatchSize:  16340, // Manual config for now, change this!
+func locationToInt(location string) int {
+	switch location {
+	case "anywhere":
+		return 0
+	case "start":
+		return 1
+	case "end":
+		return 2
+	default:
+		return 2
 	}
-	// Get OpenCL device
+}
+
+func findVanityKeysGPU(config *Config) (*resultFound, error) {
+
+	pattern := config.Patterns[0] // Take first pattern only for testing now CHANGE THIS
+	if config.IgnoreCase {
+		pattern = strings.ToLower(pattern)
+	}
+
+	patternBytes := []byte(pattern)
+	patternLen := int32(len(pattern))
+	locationInt := int32(locationToInt(config.Location))
+	ignoreCaseInt := int32(0)
+	if config.IgnoreCase {
+		ignoreCaseInt = 1
+	}
+
 	info, err := cl.Info()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OpenCL info: %v", err)
@@ -48,7 +56,7 @@ func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GP
 	// Skip cleanup to avoid segfault for now
 
 	// Load kernel
-	kernelSource, err := loadSleipnirKernel(config)
+	kernelSource, err := loadSleipnirKernel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kernel: %v", err)
 	}
@@ -72,9 +80,9 @@ func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GP
 		return nil, fmt.Errorf("failed to create public key buffer: %v", err)
 	}
 
-	seedIndexBuffer, err := runner.CreateEmptyBuffer(cl.WRITE_ONLY, batchSize*4)
+	privateKeyBuffer, err := runner.CreateEmptyBuffer(cl.WRITE_ONLY, batchSize*64) // ADD: 64 bytes per key
 	if err != nil {
-		return nil, fmt.Errorf("failed to create index buffer: %v", err)
+		return nil, fmt.Errorf("failed to create private key buffer: %v", err)
 	}
 
 	countBuffer, err := runner.CreateEmptyBuffer(cl.READ_WRITE, 4)
@@ -82,24 +90,33 @@ func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GP
 		return nil, fmt.Errorf("failed to create count buffer: %v", err)
 	}
 
-	// Generate random seeds
+	patternBuffer, err := runner.CreateEmptyBuffer(cl.READ_ONLY, len(patternBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pattern buffer: %v", err)
+	}
+
+	// Generate random seeds, we do this in go and not C so we can make it crypto secure
 	seeds := make([]byte, batchSize*32)
 	_, err = rand.Read(seeds)
 	if err != nil {
 		return nil, err
 	}
 
-	// Write data to GPU
+	// // Write buffers to gpu
 	err = cl.WriteBuffer(runner, 0, seedBuffer, seeds, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write seeds: %v", err)
 	}
 
-	// Initialize match count
 	matchCount := []int32{0}
 	err = cl.WriteBuffer(runner, 0, countBuffer, matchCount, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write count: %v", err)
+	}
+
+	err = cl.WriteBuffer(runner, 0, patternBuffer, patternBytes, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write pattern: %v", err)
 	}
 
 	// Run kernel
@@ -107,9 +124,13 @@ func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GP
 	args := []cl.KernelParam{
 		cl.BufferParam(seedBuffer),
 		cl.BufferParam(publicKeyBuffer),
-		cl.BufferParam(seedIndexBuffer),
+		cl.BufferParam(privateKeyBuffer),
 		cl.BufferParam(countBuffer),
+		cl.BufferParam(patternBuffer),
 		cl.Param(&batchSizeParam),
+		cl.Param(&patternLen),
+		cl.Param(&locationInt),
+		cl.Param(&ignoreCaseInt),
 	}
 
 	workGroupSize := uint64(256)                            // Check for config
@@ -137,50 +158,36 @@ func FindVanityKeysGPU(patterns []string, location string, ignoreCase bool) (*GP
 		return nil, nil // No matches found
 	}
 
-	// Read the first match
-	foundSeedIndices := make([]int32, 1)
-	err = cl.ReadBuffer(runner, 0, seedIndexBuffer, foundSeedIndices)
+	// Read the first match, fix this when we start streaming
+	foundPrivateKeys := make([]byte, 128)
+	err = cl.ReadBuffer(runner, 0, privateKeyBuffer, foundPrivateKeys)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read indices: %v", err)
 	}
 
-	foundPublicKeys := make([]byte, 32)
+	foundPublicKeys := make([]byte, 80)
 	err = cl.ReadBuffer(runner, 0, publicKeyBuffer, foundPublicKeys)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public keys: %v", err)
 	}
 
-	// Extract the matching seed and regenerate private key
-	seedIndex := foundSeedIndices[0]
-	matchingSeed := make([]byte, 32)
-	copy(matchingSeed, seeds[seedIndex*32:(seedIndex+1)*32])
+	data, err := privateKeyToOpenSSH(ed25519.PrivateKey(foundPrivateKeys), "")
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
 
-	// Generate the full keypair from the seed
-	privateKey := ed25519.NewKeyFromSeed(matchingSeed)
-	publicKey := privateKey.Public().(ed25519.PublicKey)
-
-	// Format as SSH key
-	sshKey := formatSSHPublicKey(publicKey)
-
-	return &GPUResult{
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
-		SSHKey:     sshKey,
+	return &resultFound{
+		pub:         string(foundPublicKeys),
+		priv:        string(foundPrivateKeys),
+		privOpenSSH: data,
 	}, nil
 }
 
-func loadSleipnirKernel(config GPUConfig) (string, error) {
+func loadSleipnirKernel() (string, error) {
 	kernelBytes, err := os.ReadFile("gpu/sleipnir_kernel.cl")
 	if err != nil {
 		return "", fmt.Errorf("failed to read kernel file: %v", err)
 	}
 	return string(kernelBytes), nil
-}
-
-// Format ED25519 public key as SSH public key (test for now, use actual one)
-func formatSSHPublicKey(pubKey ed25519.PublicKey) string {
-
-	keyBytes := []byte(pubKey)
-
-	return fmt.Sprintf("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI%s", string(keyBytes))
 }
