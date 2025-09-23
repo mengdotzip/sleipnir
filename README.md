@@ -1,8 +1,9 @@
 # Sleipnir - Super Fast Vanity SSH Key Generator
 
-Sleipnir is a super fast cross-platform vanity SSH key generator written in Go, capable of generating **1,000,000+** ED25519 keys per second on modern hardware. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH keys.
+Sleipnir is a super fast cross-platform vanity SSH key generator written in Go, capable of generating **17,000,000+** ED25519 keys per second on modern hardware using both CPU and GPU processing. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH keys.
 
-
+## Compiling
+Please checkout the [DOCS](docs/compiling.md) for information on windows and Linux compiles.
 
 ## Usage
 
@@ -11,33 +12,16 @@ Basic Usage
 # Find "cool" anywhere in the SSH key
 ./sleipnir -pattern cool
 
-# Find key starting with "Hi". Keep in mind that the starting string "AAAAC3NzaC1lZDI1NTE5AAAAI" is static
-# sleipnir will only start searching after that.
-./sleipnir -pattern Hi -location start
-
 # Find key ending with "1337" OR "meng" OR "github"
 ./sleipnir -pattern 1337,meng,github -location end
+
+# Use the gpu and cpu to find keys
+# Warning the gpu support is still in the test phase for now!
+./sleipnir -pattern mari -location end -gpu
 ```
 
-### Advanced Options
+For **more** usage examples please go to the [DOCS](docs/usage.md)
 
-```bash
-# Use specific number of workers, by default we use all threads
-./sleipnir -pattern github -workers 16
-
-# Continue even when a key is found 
-# I strongly suggest also using -output when using stream
-./sleipnir -pattern mari -stream
-
-# Output the found key to the specified file
-./sleipnir -pattern xmr -output test.txt
-
-# Case-sensitive matching
-./sleipnir -pattern MyName -ignore-case=false
-
-# Verbose logging + PKCS#8 format private key
-./sleipnir -pattern awesome -verbose
-```
 
 ## Example
 

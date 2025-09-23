@@ -44,6 +44,7 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 					os.Exit(1)
 				}
 
+				pubString = "ssh-ed25519 " + pubString
 				fmt.Printf("Made it in %v tries\n", tries)
 				result <- &resultFound{pubString, privString, privOpenSSH}
 				return
