@@ -35,10 +35,11 @@ func writeKey(result *resultFound, cfg *Config) {
 		}
 	}()
 
-	newLine := fmt.Sprintf("\n-------------------\nKEY FOUND :)!\nOpenSSH Private Key:\n%v\nPublic Key:\nssh-ed25519 %v\n-------------------\n", result.privOpenSSH, result.pub)
+	newLine := fmt.Sprintf("\n-------------------\nKEY FOUND :)!\nOpenSSH Private Key:\n%v\nPublic Key:\nssh-ed25519 %v\n", result.privOpenSSH, result.pub)
 	if cfg.Verbose {
-		newLine += fmt.Sprintf("PKCS#8 Private Key:\n%v\n", result.priv)
+		newLine += fmt.Sprintf("\nPKCS#8 Private Key:\n%v\n", result.priv)
 	}
+	newLine += "-------------------\n"
 	_, err = fmt.Fprintln(f, newLine)
 	if err != nil {
 		fmt.Println(err)

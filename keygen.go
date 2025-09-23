@@ -78,8 +78,8 @@ func checkKey(pub string, cfg *Config) bool {
 		pub = strings.ToLower(pub)
 	}
 
-	//I put 3 for loops in each case instead of 1 encapsulating the switch statement
-	//This should save time (i hope) :)
+	// I put 3 for loops in each case instead of 1 encapsulating the switch statement
+	// This should save time (i hope) :)
 	switch cfg.Location {
 	case "anywhere":
 		for _, pattern := range cfg.Patterns {

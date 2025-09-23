@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
@@ -20,6 +21,9 @@ type Config struct {
 	Stream     bool
 	Output     string
 	Verbose    bool
+	useCpu     bool
+	UseGpu     bool
+	BatchSize  int
 }
 
 func main() {
@@ -33,6 +37,9 @@ func main() {
 		stream     = flag.Bool("stream", false, "Keep finding matches (streaming mode)")
 		output     = flag.String("output", "", "Write found keys to a file")
 		verbose    = flag.Bool("verbose", false, "verbose logging")
+		useCpu     = flag.Bool("cpu", true, "Use your CPU for generation (slower)")
+		useGpu     = flag.Bool("gpu", false, "Use your GPU for generation")
+		batchSize  = flag.Int("batch-size", 65536, "Amount of workers per gpu call")
 	)
 	flag.Parse()
 
@@ -47,7 +54,7 @@ func main() {
 	}
 
 	if *location == "" {
-		//Technically we should never enter this function, but you never know.
+		// Technically we should never enter this function, but you never know.
 		fmt.Println("UNKOWN: Use '-location start,end or anywhere'")
 		os.Exit(1)
 	}
@@ -69,6 +76,9 @@ func main() {
 		Stream:     *stream,
 		Output:     *output,
 		Verbose:    *verbose,
+		useCpu:     *useCpu,
+		UseGpu:     *useGpu,
+		BatchSize:  *batchSize,
 	}
 	//------------
 
@@ -76,15 +86,26 @@ func main() {
 	fmt.Printf("Hunting pattern: %v\n", *pattern)
 	fmt.Println("Press Ctrl+C to stop")
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	var wg sync.WaitGroup
-	if !config.Stream {
-		foundResult := startGen(config, &wg)
-		printResult(foundResult, config)
-		if config.Output != "" {
-			writeKey(foundResult, config)
+	go stats(ctx, config)
+	if config.UseGpu {
+		fmt.Println("WARNING: GPU is still in TESTING only -location end works")
+		wg.Add(1)
+		go startGpuGen(config, &wg, ctx, stop)
+	}
+
+	if config.useCpu {
+		if !config.Stream {
+			foundResult := startGen(config, &wg, ctx, stop)
+			printResult(foundResult, config)
+			if config.Output != "" {
+				writeKey(foundResult, config)
+			}
+		} else {
+			startGenStream(config, &wg, ctx)
 		}
-	} else {
-		startGenStream(config, &wg)
 	}
 
 	wg.Wait()
@@ -98,16 +119,41 @@ func printResult(result *resultFound, cfg *Config) {
 		if cfg.Verbose {
 			fmt.Printf("PKCS#8 Private Key:\n%v\n", result.priv)
 		}
-		fmt.Printf("OpenSSH Private Key:\n%v\nPublic Key:\nssh-ed25519 %v\n", result.privOpenSSH, result.pub)
+		fmt.Printf("OpenSSH Private Key:\n%v\nPublic Key:\n%v\n", result.privOpenSSH, result.pub)
 	}
 }
 
-func startGenStream(cfg *Config, wg *sync.WaitGroup) {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+func startGpuGen(config *Config, wg *sync.WaitGroup, ctx context.Context, stop context.CancelFunc) {
+	defer wg.Done()
+	gpuCTX, err := initGpu(config)
+	if err != nil {
+		fmt.Printf("Error loading the kernel %v", err)
+	}
 
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			found, err := gpuCTX.findVanityKeysGPU(config)
+			if err != nil {
+				fmt.Println(err)
+				stop()
+				return
+			}
+			atomic.AddUint64(&tries, uint64(config.BatchSize))
+			if found != nil {
+				printResult(found, config)
+				stop()
+				return
+			}
+		}
+
+	}
+}
+
+func startGenStream(cfg *Config, wg *sync.WaitGroup, ctx context.Context) {
 	result := make(chan *resultFound, 1)
-	go stats(ctx, cfg)
 
 	for i := 0; i < cfg.Workers; i++ {
 		wg.Add(1)
@@ -126,13 +172,8 @@ func startGenStream(cfg *Config, wg *sync.WaitGroup) {
 	}
 }
 
-func startGen(cfg *Config, wg *sync.WaitGroup) *resultFound {
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+func startGen(cfg *Config, wg *sync.WaitGroup, ctx context.Context, stop context.CancelFunc) *resultFound {
 	result := make(chan *resultFound, 1)
-	go stats(ctx, cfg)
 
 	for i := 0; i < cfg.Workers; i++ {
 		wg.Add(1)
