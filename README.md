@@ -16,7 +16,6 @@ Basic Usage
 ./sleipnir -pattern 1337,meng,github -location end
 
 # Use the gpu and cpu to find keys
-# Warning the gpu support is still in the test phase for now!
 ./sleipnir -pattern mari -location end -gpu
 ```
 

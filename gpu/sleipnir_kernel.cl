@@ -73,7 +73,7 @@ static inline char to_lowercase(char c) {
 
 static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern, int pattern_length, int location, int ignore_case) {
     if (ssh_key[0] == '\0') return false; 
-     const int SSH_ED25519_KEY_LENGTH = 80;
+    const int SSH_ED25519_KEY_LENGTH = 80;
     if (location == 2){ //end
         const int SSH_START = SSH_ED25519_KEY_LENGTH - pattern_length;
 
@@ -91,7 +91,8 @@ static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern,
         }
         }
         return true;
-    } else if (location == 0){ //anywhere
+    } 
+    else if (location == 0){ //anywhere
         for (int j = SSH_PREFIX_LEN; j < 80; j++) {
             for (int i = 0; i < pattern_length; i++) {
                 char key_char = ssh_key[j + i];
@@ -111,7 +112,26 @@ static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern,
             }
         }
         return false;
+
     }
+    else if (location == 1){ //start
+        const int SSH_START = SSH_PREFIX_LEN;
+
+        for (int j = 0; j < pattern_length; j++) {
+
+            char key_char = ssh_key[SSH_START + j];
+            char pattern_char = pattern[j];
+
+            if (ignore_case) {
+                key_char = to_lowercase(key_char);
+            }
+
+            if (key_char != pattern_char) {
+                    return false;
+            }
+        }
+        return true;
+    } 
 
     return false;
 }

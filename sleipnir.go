@@ -63,6 +63,10 @@ func main() {
 		fmt.Println("WARNING: I strongly suggest using -output to write the keys to a file while using stream.")
 	}
 
+	if *stream && *useGpu {
+		fmt.Println("WARNING: streaming is not yet supported on gpu")
+	}
+
 	if *ignoreCase {
 		*pattern = strings.ToLower(*pattern)
 	}
@@ -91,7 +95,6 @@ func main() {
 	var wg sync.WaitGroup
 	go stats(ctx, config)
 	if config.UseGpu {
-		fmt.Println("WARNING: GPU is still in TESTING only -location end.anywhere works")
 		wg.Add(1)
 		go startGpuGen(config, &wg, ctx, stop)
 	}
