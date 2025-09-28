@@ -91,7 +91,7 @@ func main() {
 	var wg sync.WaitGroup
 	go stats(ctx, config)
 	if config.UseGpu {
-		fmt.Println("WARNING: GPU is still in TESTING only -location end works")
+		fmt.Println("WARNING: GPU is still in TESTING only -location end.anywhere works")
 		wg.Add(1)
 		go startGpuGen(config, &wg, ctx, stop)
 	}

@@ -65,6 +65,13 @@ go test -v
 
 ## Benchmarks
 
+| GPU                     | keys/s | OS              |
+|:------------------------|:------:|:----------------|
+| GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 |
+| GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 |
+| GeForce RTX 4070 12GB   | ~9.5M  | Windows 11 23H2 |
+
+
 | CPU                  |keys/s | OS              |
 |:---------------------|:-----:|:----------------|
 | Intel Core i7-13700K | ~1M   | Windows 11 23H2 |

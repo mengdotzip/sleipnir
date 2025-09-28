@@ -133,7 +133,7 @@ func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
 		return nil, err
 	}
 
-	// // Write buffers to gpu
+	// Write buffers to gpu
 	err = cl.WriteBuffer(g.runner, 0, g.seedBuffer, seeds, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write seeds: %v", err)

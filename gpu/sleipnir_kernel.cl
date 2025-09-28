@@ -12,13 +12,7 @@ typedef unsigned long uint64_t;
 typedef long int64_t;
 typedef int32_t fe[10];
 
-// DO NOT EDIT BELOW 5 LINES BY HAND -- CHANGES WILL BE OVERWRITTEN
-#define N 1
-#define L 2
-constant uchar PATTERNS[N][L] = {{"hi"}};
-constant uchar SUFFIX[] = {};
 constant bool CASE_SENSITIVE = false;
-// DO NOT EDIT ABOVE THIS LINE -- END OF AUTO-GENERATED CODE
 
 #define ADJUST_INPUT_CASE(x) \
 (CASE_SENSITIVE ? (x) : \
@@ -26,7 +20,6 @@ constant bool CASE_SENSITIVE = false;
         (((unsigned int) 67091966 >> ((x) & 31)) & 1) * \
         (24 + (((unsigned int) 67079168 >> ((x) & 31)) & 1))))
 
-constant char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
 constant int SSH_PREFIX_LEN = 37;
 constant char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -67,9 +60,7 @@ static inline void format_ssh_key(const unsigned char* public_key, char* ssh_key
     
     // Base64 encode the 32-byte public key
     base64_encode_32(public_key, &ssh_key[SSH_PREFIX_LEN]);
-    
-    // Add null terminator
-    ssh_key[80] = '\0';  // ← ADD THIS LINE
+    ssh_key[80] = '\0';
 }
 
 
@@ -80,12 +71,10 @@ static inline char to_lowercase(char c) {
     return c;
 }
 
-// Check if SSH key matches patterns
 static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern, int pattern_length, int location, int ignore_case) {
-    // meng written C code, this could be bad:
-    if (location == 2){
-        if (ssh_key[0] == '\0') return false; 
-        const int SSH_ED25519_KEY_LENGTH = 80;
+    if (ssh_key[0] == '\0') return false; 
+     const int SSH_ED25519_KEY_LENGTH = 80;
+    if (location == 2){ //end
         const int SSH_START = SSH_ED25519_KEY_LENGTH - pattern_length;
 
         for (int j = 0; j < pattern_length; j++) {
@@ -102,34 +91,30 @@ static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern,
         }
         }
         return true;
+    } else if (location == 0){ //anywhere
+        for (int j = SSH_PREFIX_LEN; j < 80; j++) {
+            for (int i = 0; i < pattern_length; i++) {
+                char key_char = ssh_key[j + i];
+                char pattern_char = pattern[i];
+
+                if (ignore_case) {
+                    key_char = to_lowercase(key_char);
+                }
+
+                if (key_char != pattern_char) {
+                    break;
+                }
+
+                if (i == pattern_length - 1){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
+
     return false;
 }
-
-
-//static inline void base64_encode_32(const unsigned char* input, char* output) {
-//    // Encode exactly 32 bytes to 43 chars + padding
-//    int i, j = 0;
-//    for (i = 0; i < 32; i += 3) {
-//        unsigned int val = 0;
-//        int pad = 0;
-//        
-//        // Read up to 3 bytes
-//        val |= (unsigned int)input[i] << 16;
-//        if (i + 1 < 32) val |= (unsigned int)input[i + 1] << 8;
-//        else pad++;
-//        if (i + 2 < 32) val |= (unsigned int)input[i + 2];
-//        else pad++;
-//        
-//        // Output 4 base64 characters
-//        output[j++] = base64_chars[(val >> 18) & 0x3F];
-//        output[j++] = base64_chars[(val >> 12) & 0x3F];
-//        output[j++] = (pad > 1) ? '=' : base64_chars[(val >> 6) & 0x3F];
-//        output[j++] = (pad > 0) ? '=' : base64_chars[val & 0x3F];
-//    }
-//    output[43] = '\0'; // Null terminate
-//}
-
 
 /*
 r = p + q
@@ -3761,32 +3746,20 @@ __kernel void sleipnir_ed25519_keygen(
     // Format as SSH key
     format_ssh_key(public_key, ssh_key);
     
-    // Check for pattern match
-        if (check_ssh_pattern(ssh_key,pattern,pattern_length,location,ignore_case)) {
-    int slot = atomic_inc(match_count);
-    if (slot < batch_size) {
-       // found_seed_indices[slot] = idx;
+    if (check_ssh_pattern(ssh_key,pattern,pattern_length,location,ignore_case)) {
+        int slot = atomic_inc(match_count);
+        if (slot < batch_size) {
         
-        // Store the SSH key that actually matched the pattern
-        for (int i = 0; i < 80; i++) {
-            found_public_keys[slot * 80 + i] = ssh_key[i];
-        }
+            // Store the SSH key that actually matched the pattern
+            for (int i = 0; i < 80; i++) {
+                found_public_keys[slot * 80 + i] = ssh_key[i];
+            }
 
-        for (int i = 0; i < 64; i++) {
+            for (int i = 0; i < 64; i++) {
                 found_private_keys[slot * 64 + i] = private_key[i];
             }
+        }
     }
-    }
-
-      /*  int slot = atomic_inc(match_count);
-        if (slot < batch_size) {  // Safety check
-            found_seed_indices[slot] = idx;
-            
-            // Copy matching public key
-            for (int i = 0; i < 32; i++) {
-                found_public_keys[slot * 32 + i] = public_key[i];
-            }
-        }*/
     
 }
 
