@@ -63,10 +63,6 @@ func main() {
 		fmt.Println("WARNING: I strongly suggest using -output to write the keys to a file while using stream.")
 	}
 
-	if *stream && *useGpu {
-		fmt.Println("WARNING: streaming is not yet supported on gpu")
-	}
-
 	if *ignoreCase {
 		*pattern = strings.ToLower(*pattern)
 	}
@@ -147,8 +143,14 @@ func startGpuGen(config *Config, wg *sync.WaitGroup, ctx context.Context, stop c
 			atomic.AddUint64(&tries, uint64(config.BatchSize))
 			if found != nil {
 				printResult(found, config)
-				stop()
-				return
+				if !config.Stream {
+					stop()
+					return
+				}
+
+				if config.Output != "" {
+					writeKey(found, config)
+				}
 			}
 		}
 

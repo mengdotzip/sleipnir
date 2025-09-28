@@ -22,13 +22,12 @@ constant bool CASE_SENSITIVE = false;
 
 constant int SSH_PREFIX_LEN = 37;
 constant char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
 
 // Add after your constants but before the main kernel:
 
 // Base64 encoding for SSH keys
 static inline void base64_encode_32(const unsigned char* input, char* output) {
-    const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    
     int i, j = 0;
     for (i = 0; i < 32; i += 3) {
         unsigned int val = 0;
@@ -50,9 +49,6 @@ static inline void base64_encode_32(const unsigned char* input, char* output) {
 
 // Format ED25519 public key as SSH key
 static inline void format_ssh_key(const unsigned char* public_key, char* ssh_key) {
-    const char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
-    const int SSH_PREFIX_LEN = 37;
-    
     // Copy SSH prefix
     for (int i = 0; i < SSH_PREFIX_LEN; i++)  {
         ssh_key[i] = SSH_PREFIX[i];

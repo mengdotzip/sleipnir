@@ -68,7 +68,7 @@ go test -v
 |:------------------------|:------:|:----------------|
 | GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 |
 | GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 |
-| GeForce RTX 4070 12GB   | ~9.5M  | Windows 11 23H2 |
+| GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 |
 
 
 | CPU                  |keys/s | OS              |
