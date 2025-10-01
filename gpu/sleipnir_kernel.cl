@@ -12,7 +12,7 @@ typedef unsigned long uint64_t;
 typedef long int64_t;
 typedef int32_t fe[10];
 
-constant bool CASE_SENSITIVE = false;
+bool CASE_SENSITIVE = false;
 
 #define ADJUST_INPUT_CASE(x) \
 (CASE_SENSITIVE ? (x) : \
@@ -3751,7 +3751,8 @@ __kernel void sleipnir_ed25519_keygen(
     unsigned char public_key[32] __attribute__((aligned(4)));
     unsigned char private_key[64];
     char ssh_key[128];
-    
+    CASE_SENSITIVE = true;
+
     // Copy seed from global memory
     for (int i = 0; i < 32; i++) {
         keybase[i] = seeds[idx * 32 + i];
@@ -3762,6 +3763,7 @@ __kernel void sleipnir_ed25519_keygen(
     // Format as SSH key
     format_ssh_key(public_key, ssh_key);
     
+
     if (check_ssh_pattern(ssh_key,pattern,pattern_length,location,ignore_case)) {
         int slot = atomic_inc(match_count);
         if (slot < batch_size) {
