@@ -49,7 +49,8 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII44C87jrgvZi/pkNUVpwb0jlnUGXkiUu+/RMS5wMENG
 All goroutines closed successfully
 
 ```
-**NOTE** If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
+> [!NOTE]  
+> If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
 
 ## Tests
 Benchmark the speed of the ssh keygen per core and the Sleipnir keys/s:
