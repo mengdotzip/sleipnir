@@ -5,7 +5,7 @@ Dependencies
 sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
 
 # ARCH
-sudo pacman -S opencl-headers ocl-icd opencl-nvidia gcc
+sudo pacman -S opencl-headers ocl-icd gcc
 ```
 Set CGO flags
 ```
@@ -19,7 +19,11 @@ go build
 
 Running
 ```
+# Debian/Ubuntu
 sudo apt install nvidia-opencl-icd 
+
+# ARCH
+sudo pacman -S opencl-nvidia
 ```
 
 ## Compiling on linux for windows:
