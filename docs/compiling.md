@@ -2,19 +2,16 @@
 Dependencies
 ```
 # Debian/Ubuntu
-sudo apt install opencl-headers ocl-icd-opencl-dev
-sudo apt install nvidia-opencl-icd 
+sudo apt install opencl-headers ocl-icd-opencl-dev nvidia-opencl-icd build-essential
+
+# ARCH
+sudo pacman -S opencl-headers ocl-icd opencl-nvidia gcc
 ```
-Set CGO flags for opencl
+Set CGO flags
 ```
-export CGO_CFLAGS="-I/usr/include"
-export CGO_LDFLAGS="-lOpenCL"
 go env -w CGO_ENABLED=1  
 ```
-gcc
-```
-sudo apt install build-essential
-```
+
 Build
 ```
 go build

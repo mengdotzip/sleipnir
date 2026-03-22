@@ -23,6 +23,9 @@ type GPUContext struct {
 
 	workGroupSize  uint64
 	globalWorkSize uint64
+
+	seedsChan chan []byte
+	stopChan  chan struct{}
 }
 
 func locationToInt(location string) int {
@@ -111,7 +114,7 @@ func initGpu(config *Config) (*GPUContext, error) {
 	workGroupSize := uint64(256)
 	globalWorkSize := uint64((batchSize + 255) / 256 * 256)
 
-	return &GPUContext{
+	gpuCtx := &GPUContext{
 		runner:           runner,
 		batchSize:        batchSize,
 		seedBuffer:       seedBuffer,
@@ -122,7 +125,31 @@ func initGpu(config *Config) (*GPUContext, error) {
 		patternLenBuffer: patternLenBuffer,
 		workGroupSize:    workGroupSize,
 		globalWorkSize:   globalWorkSize,
-	}, nil
+		seedsChan:        make(chan []byte, 2),
+		stopChan:         make(chan struct{}),
+	}
+
+	go func() {
+		for {
+			select {
+			case <-gpuCtx.stopChan:
+				return
+			default:
+				seeds := make([]byte, batchSize*32)
+				_, err := rand.Read(seeds)
+				if err != nil {
+					return
+				}
+				select {
+				case gpuCtx.seedsChan <- seeds:
+				case <-gpuCtx.stopChan:
+					return
+				}
+			}
+		}
+	}()
+
+	return gpuCtx, nil
 }
 
 func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
@@ -143,13 +170,16 @@ func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
 		ignoreCaseInt = 1
 	}
 
+	/**
 	seeds := make([]byte, g.batchSize*32)
 	_, err := rand.Read(seeds)
 	if err != nil {
 		return nil, err
-	}
+	} **/
 
-	err = cl.WriteBuffer(g.runner, 0, g.seedBuffer, seeds, true)
+	seeds := <-g.seedsChan
+
+	err := cl.WriteBuffer(g.runner, 0, g.seedBuffer, seeds, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write seeds: %v", err)
 	}
@@ -243,4 +273,8 @@ func loadSleipnirKernel() (string, error) {
 		return "", fmt.Errorf("failed to read kernel file: %v", err)
 	}
 	return string(kernelBytes), nil
+}
+
+func (g *GPUContext) Cleanup() {
+	close(g.stopChan)
 }

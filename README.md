@@ -65,18 +65,19 @@ go test -v
 
 ## Benchmarks
 
-| GPU                     | keys/s | OS              |
-|:------------------------|:------:|:----------------|
-| GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 |
-| GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 |
-| GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 |
+| GPU                     | keys/s | OS              | Version   |
+|:------------------------|:------:|:----------------|-----------|
+| GeForce RTX 4070 12GB   | ~20.5M | Debian Linux 13 | 1.0.0     |
+| GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 | pre-1.0.0 |
+| GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 | pre-1.0.0 |
+| GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 | pre-1.0.0 |
 
 
-| CPU                  |keys/s | OS              |
-|:---------------------|:-----:|:----------------|
-| Intel Core i7-13700K | ~1M   | Windows 11 23H2 |
-| AMD Ryzen 9 7950X    | ~920k | Fedora Linux 42 |
-| AMD Ryzen 7 7800x3d  | ~570K | Fedora Linux 42 |
-| AMD Ryzen 5 7600X    | ~500K | Debian Linux 12 |
-| Apple M1             | ~280k | macOS 26        |
-| lx2160a A72          | ~143K | Fedora Linux 42 |
+| CPU                  |keys/s | OS              | Version   |
+|:---------------------|:-----:|:----------------|-----------|
+| Intel Core i7-13700K | ~1M   | Windows 11 23H2 | pre-1.0.0 |
+| AMD Ryzen 9 7950X    | ~920k | Fedora Linux 42 | pre-1.0.0 |
+| AMD Ryzen 7 7800x3d  | ~570K | Fedora Linux 42 | pre-1.0.0 |
+| AMD Ryzen 5 7600X    | ~500K | Debian Linux 12 | pre-1.0.0 |
+| Apple M1             | ~280k | macOS 26        | pre-1.0.0 |
+| lx2160a A72          | ~143K | Fedora Linux 42 | pre-1.0.0 |

@@ -26,8 +26,11 @@ type Config struct {
 	BatchSize  int
 }
 
+const version string = "1.0.0"
+
 func main() {
 
+	fmt.Println("Sleipnir version ", version)
 	//Config creation
 	var (
 		pattern    = flag.String("pattern", "", "Pattern(s) to match in public key")
@@ -135,6 +138,8 @@ func startGpuGen(config *Config, wg *sync.WaitGroup, ctx context.Context, stop c
 		fmt.Printf("Error loading the kernel %v", err)
 		return
 	}
+
+	defer gpuCTX.Cleanup()
 
 	for {
 		select {
