@@ -2,7 +2,7 @@
 Dependencies
 ```
 # Debian/Ubuntu
-sudo apt install opencl-headers ocl-icd-opencl-dev nvidia-opencl-icd build-essential
+sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
 
 # ARCH
 sudo pacman -S opencl-headers ocl-icd opencl-nvidia gcc
@@ -15,6 +15,11 @@ go env -w CGO_ENABLED=1
 Build
 ```
 go build
+```
+
+Running
+```
+sudo apt install nvidia-opencl-icd 
 ```
 
 ## Compiling on linux for windows:
