@@ -45,7 +45,11 @@ jobs:
       run: sudo apt install opencl-headers ocl-icd-opencl-dev build-essential zip
 
     - name: Install Zig
-      uses: mlugg/setup-zig@v1
+      run: |
+        wget -q https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+        tar -xf zig-x86_64-linux-0.15.2.tar.xz
+        echo "$PWD/zig-x86_64-linux-0.15.2" >> $GITHUB_PATH
+
 
     - name: Build
       run: |
