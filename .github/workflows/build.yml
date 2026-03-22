@@ -4,24 +4,56 @@ on:
     branches: [ main ]
   pull_request_target:
     branches: [ main ]
+
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
-    - name: Install
-      uses: actions/setup-go@v6.3.0
+      uses: actions/checkout@v4
+
+    - name: Install Go
+      uses: actions/setup-go@v5
+
     - name: Install Dependencies
       run: sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
-    - name: Set env
-      run: go env -w CGO_ENABLED=1  
+
     - name: Build
-      run: go build
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v7
+      run: CGO_ENABLED=1 go build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: sleipnir-linux.zip
-        path: |
-          sleipnir
-          gpu/
+        name: sleipnir-linux
+        path: sleipnir
+
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Go
+      uses: actions/setup-go@v5
+
+    - name: Install Dependencies
+      run: sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
+
+    - name: Install Zig
+      run: |
+        wget -q https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+        tar -xf zig-x86_64-linux-0.15.2.tar.xz
+        echo "$PWD/zig-x86_64-linux-0.15.2" >> $GITHUB_PATH
+
+    - name: Build
+      run: |
+        CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
+        CC="zig cc -target x86_64-windows" \
+        CXX="zig c++ -target x86_64-windows" \
+        go build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sleipnir-windows
+        path: sleipnir.exe
