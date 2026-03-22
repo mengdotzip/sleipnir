@@ -3,35 +3,33 @@ on:
   push:
     tags:
       - "v*"
+
+permissions:
+  contents: write
+
 jobs:
-   build:
+  build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v4
+
     - name: Install
-      uses: actions/setup-go@v6.3.0
+      uses: actions/setup-go@v5
+
     - name: Install Dependencies
       run: sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
+
     - name: Set env
-      run: go env -w CGO_ENABLED=1  
+      run: go env -w CGO_ENABLED=1
+
     - name: Build
       run: go build
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: sleipnir-linux.zip
-        path: |
-          sleipnir
-          gpu/
-    - uses: actions/download-artifact@v8
-      id: download
-      with:
-        name: sleipnir-linux.zip
+
+    - name: Zip
+      run: zip -r sleipnir-linux.zip sleipnir gpu/
+
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: github.ref_type == 'tag'
       with:
-        files: ${{ steps.download.outputs.download-path }}/sleipnir-linux.zip
-permissions:
-  contents: write
+        files: sleipnir-linux.zip
