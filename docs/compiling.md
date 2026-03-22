@@ -3,12 +3,7 @@ Dependencies
 ```
 # Debian/Ubuntu
 sudo apt install opencl-headers ocl-icd-opencl-dev
-
-# Arch/Manjaro
-sudo pacman -S opencl-headers ocl-icd
-
-# Fedora/RHEL
-sudo dnf install opencl-headers ocl-icd-devel
+sudo apt install nvidia-opencl-icd 
 ```
 Set CGO flags for opencl
 ```

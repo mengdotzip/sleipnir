@@ -19,7 +19,7 @@ type GPUContext struct {
 	privBuffer       *cl.Buffer
 	countBuffer      *cl.Buffer
 	patternBuffer    *cl.Buffer
-	patternLenBuffer *cl.Buffer // NEW
+	patternLenBuffer *cl.Buffer
 
 	workGroupSize  uint64
 	globalWorkSize uint64
