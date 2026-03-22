@@ -3746,10 +3746,10 @@ __kernel void sleipnir_ed25519_keygen(
     __global unsigned char* found_public_keys,
     __global unsigned char* found_private_keys,
     __global int* match_count,
-    __global char* all_patterns,          // NEW: replaces old "pattern"
-    __global unsigned char* pattern_lengths, // NEW: replaces old "pattern_length"
+    __global char* all_patterns,         
+    __global unsigned char* pattern_lengths, 
     int batch_size,
-    int num_patterns,                     // NEW: replaces old nothing
+    int num_patterns,                     
     int location,
     int ignore_case
 ) {

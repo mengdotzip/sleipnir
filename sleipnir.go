@@ -89,6 +89,12 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	var wg sync.WaitGroup
+
+	if err := validatePatterns(config.Patterns, config.IgnoreCase); err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
 	go stats(ctx, config)
 	if config.UseGpu {
 		wg.Add(1)
@@ -194,4 +200,17 @@ func startGen(cfg *Config, wg *sync.WaitGroup, ctx context.Context, stop context
 		return nil
 	}
 
+}
+
+const validBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+func validatePatterns(patterns []string, ignoreCase bool) error {
+	for _, p := range patterns {
+		for _, c := range p {
+			if !strings.ContainsRune(validBase64, c) {
+				return fmt.Errorf("pattern %q contains character '%c' which can never appear in an SSH public key (not in base64 alphabet)", p, c)
+			}
+		}
+	}
+	return nil
 }
