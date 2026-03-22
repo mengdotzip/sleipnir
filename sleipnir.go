@@ -127,6 +127,7 @@ func startGpuGen(config *Config, wg *sync.WaitGroup, ctx context.Context, stop c
 	gpuCTX, err := initGpu(config)
 	if err != nil {
 		fmt.Printf("Error loading the kernel %v", err)
+		return
 	}
 
 	for {
