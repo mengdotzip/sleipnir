@@ -16,7 +16,6 @@ Basic Usage
 ./sleipnir -pattern 1337,meng,github -location end
 
 # Use the gpu and cpu to find keys
-# Warning the gpu support is still in the test phase for now!
 ./sleipnir -pattern mari -location end -gpu
 ```
 
@@ -50,7 +49,8 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII44C87jrgvZi/pkNUVpwb0jlnUGXkiUu+/RMS5wMENG
 All goroutines closed successfully
 
 ```
-**NOTE** If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
+> [!NOTE]  
+> If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
 
 ## Tests
 Benchmark the speed of the ssh keygen per core and the Sleipnir keys/s:
@@ -69,7 +69,7 @@ go test -v
 |:------------------------|:------:|:----------------|
 | GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 |
 | GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 |
-| GeForce RTX 4070 12GB   | ~9.5M  | Windows 11 23H2 |
+| GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 |
 
 
 | CPU                  |keys/s | OS              |

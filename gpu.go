@@ -201,9 +201,14 @@ func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
 		return nil, err
 	}
 
+	privKey, err := privateKeyToPEM(ed25519.PrivateKey(foundPrivateKeys))
+	if err != nil {
+		return nil, err
+	}
+
 	return &resultFound{
 		pub:         string(foundPublicKeys),
-		priv:        string(foundPrivateKeys),
+		priv:        privKey,
 		privOpenSSH: data,
 	}, nil
 }

@@ -12,7 +12,7 @@ typedef unsigned long uint64_t;
 typedef long int64_t;
 typedef int32_t fe[10];
 
-constant bool CASE_SENSITIVE = false;
+bool CASE_SENSITIVE = false;
 
 #define ADJUST_INPUT_CASE(x) \
 (CASE_SENSITIVE ? (x) : \
@@ -22,13 +22,12 @@ constant bool CASE_SENSITIVE = false;
 
 constant int SSH_PREFIX_LEN = 37;
 constant char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
 
 // Add after your constants but before the main kernel:
 
 // Base64 encoding for SSH keys
 static inline void base64_encode_32(const unsigned char* input, char* output) {
-    const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    
     int i, j = 0;
     for (i = 0; i < 32; i += 3) {
         unsigned int val = 0;
@@ -50,9 +49,6 @@ static inline void base64_encode_32(const unsigned char* input, char* output) {
 
 // Format ED25519 public key as SSH key
 static inline void format_ssh_key(const unsigned char* public_key, char* ssh_key) {
-    const char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
-    const int SSH_PREFIX_LEN = 37;
-    
     // Copy SSH prefix
     for (int i = 0; i < SSH_PREFIX_LEN; i++)  {
         ssh_key[i] = SSH_PREFIX[i];
@@ -73,7 +69,7 @@ static inline char to_lowercase(char c) {
 
 static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern, int pattern_length, int location, int ignore_case) {
     if (ssh_key[0] == '\0') return false; 
-     const int SSH_ED25519_KEY_LENGTH = 80;
+    const int SSH_ED25519_KEY_LENGTH = 80;
     if (location == 2){ //end
         const int SSH_START = SSH_ED25519_KEY_LENGTH - pattern_length;
 
@@ -91,7 +87,8 @@ static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern,
         }
         }
         return true;
-    } else if (location == 0){ //anywhere
+    } 
+    else if (location == 0){ //anywhere
         for (int j = SSH_PREFIX_LEN; j < 80; j++) {
             for (int i = 0; i < pattern_length; i++) {
                 char key_char = ssh_key[j + i];
@@ -111,7 +108,26 @@ static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern,
             }
         }
         return false;
+
     }
+    else if (location == 1){ //start
+        const int SSH_START = SSH_PREFIX_LEN;
+
+        for (int j = 0; j < pattern_length; j++) {
+
+            char key_char = ssh_key[SSH_START + j];
+            char pattern_char = pattern[j];
+
+            if (ignore_case) {
+                key_char = to_lowercase(key_char);
+            }
+
+            if (key_char != pattern_char) {
+                    return false;
+            }
+        }
+        return true;
+    } 
 
     return false;
 }
@@ -3735,7 +3751,8 @@ __kernel void sleipnir_ed25519_keygen(
     unsigned char public_key[32] __attribute__((aligned(4)));
     unsigned char private_key[64];
     char ssh_key[128];
-    
+    CASE_SENSITIVE = true;
+
     // Copy seed from global memory
     for (int i = 0; i < 32; i++) {
         keybase[i] = seeds[idx * 32 + i];
@@ -3746,6 +3763,7 @@ __kernel void sleipnir_ed25519_keygen(
     // Format as SSH key
     format_ssh_key(public_key, ssh_key);
     
+
     if (check_ssh_pattern(ssh_key,pattern,pattern_length,location,ignore_case)) {
         int slot = atomic_inc(match_count);
         if (slot < batch_size) {

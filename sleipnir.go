@@ -91,7 +91,6 @@ func main() {
 	var wg sync.WaitGroup
 	go stats(ctx, config)
 	if config.UseGpu {
-		fmt.Println("WARNING: GPU is still in TESTING only -location end.anywhere works")
 		wg.Add(1)
 		go startGpuGen(config, &wg, ctx, stop)
 	}
@@ -144,8 +143,14 @@ func startGpuGen(config *Config, wg *sync.WaitGroup, ctx context.Context, stop c
 			atomic.AddUint64(&tries, uint64(config.BatchSize))
 			if found != nil {
 				printResult(found, config)
-				stop()
-				return
+				if !config.Stream {
+					stop()
+					return
+				}
+
+				if config.Output != "" {
+					writeKey(found, config)
+				}
 			}
 		}
 
