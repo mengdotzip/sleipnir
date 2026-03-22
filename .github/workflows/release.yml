@@ -25,12 +25,13 @@ jobs:
           sleipnir
           gpu/
     - uses: actions/download-artifact@v8
+      id: download
       with:
         name: sleipnir-linux.zip
     - name: Release
       uses: softprops/action-gh-release@v2
       if: github.ref_type == 'tag'
       with:
-        files: sleipnir-linux.zip
+        files: ${{ steps.download.outputs.download-path }}/sleipnir-linux.zip
 permissions:
   contents: write
