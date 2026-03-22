@@ -20,12 +20,17 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v7
       with:
-        name: sleipnir-linux
-        path: sleipnir
+        name: sleipnir-linux.zip
+        path: |
+          sleipnir
+          gpu/
+    - uses: actions/download-artifact@v8
+      with:
+        name: sleipnir-linux.zip
     - name: Release
       uses: softprops/action-gh-release@v2
       if: github.ref_type == 'tag'
       with:
-        files: sleipnir
+        files: sleipnir-linux.zip
 permissions:
   contents: write
