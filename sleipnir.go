@@ -4,9 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -43,8 +45,19 @@ func main() {
 		useCpu     = flag.Bool("cpu", true, "Use your CPU for generation (slower)")
 		useGpu     = flag.Bool("gpu", false, "Use your GPU for generation")
 		batchSize  = flag.Int("batch-size", 65536, "Amount of workers per gpu call")
+		usePprof   = flag.Bool("pprof", false, "enable pprof")
 	)
 	flag.Parse()
+
+	if *usePprof {
+		f, err := os.Create("sleipnir.pprof")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	if *pattern == "" {
 		fmt.Println("Sleipnir - Vanity SSH Key Generator")

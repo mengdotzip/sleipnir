@@ -125,7 +125,7 @@ func initGpu(config *Config) (*GPUContext, error) {
 		patternLenBuffer: patternLenBuffer,
 		workGroupSize:    workGroupSize,
 		globalWorkSize:   globalWorkSize,
-		seedsChan:        make(chan []byte, 2),
+		seedsChan:        make(chan []byte, 8),
 		stopChan:         make(chan struct{}),
 	}
 
@@ -135,15 +135,19 @@ func initGpu(config *Config) (*GPUContext, error) {
 			case <-gpuCtx.stopChan:
 				return
 			default:
-				seeds := make([]byte, batchSize*32)
+				seeds := make([]byte, batchSize*32*4)
 				_, err := rand.Read(seeds)
 				if err != nil {
 					return
 				}
-				select {
-				case gpuCtx.seedsChan <- seeds:
-				case <-gpuCtx.stopChan:
-					return
+				// Split into 4 chunks and feed them individually
+				for i := 0; i < 4; i++ {
+					chunk := seeds[i*batchSize*32 : (i+1)*batchSize*32]
+					select {
+					case gpuCtx.seedsChan <- chunk:
+					case <-gpuCtx.stopChan:
+						return
+					}
 				}
 			}
 		}

@@ -63,12 +63,20 @@ Test if we are generating valid ssh keys:
 go test -v
 ```
 
+##### Flagegraph:
+Run sleipnir for a bit with the **-pprof** flag
+Then run the following command:
+```
+go tool pprof -http=:8000 sleipnir.pprof
+```
+Visit http://localhost:8000/ui/flamegraph for the graph.
+
 ## Benchmarks
 
 | GPU                     | keys/s | OS              | Version   |
 |:------------------------|:------:|:----------------|-----------|
 | GeForce RTX 3080 10GB   | ~23M   | Arch Linux      | 1.0.0     |
-| GeForce RTX 4070 12GB   | ~20.5M | Debian Linux 13 | 1.0.0     |
+| GeForce RTX 4070 12GB   | ~25M   | Debian Linux 13 | 1.0.0     |
 | GeForce RTX 3080 10GB   | ~17M   | Windows 11 23H2 | pre-1.0.0 |
 | GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 | pre-1.0.0 |
 | GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 | pre-1.0.0 |

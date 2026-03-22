@@ -33,3 +33,4 @@ go.work.sum
 
 sleipnir
 sleipnir.exe
+*.pprof
