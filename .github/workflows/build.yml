@@ -1,0 +1,25 @@
+name: Build
+on:
+  push:
+    branches: [ main ]
+  pull_request_target:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+    - name: Install
+      uses: actions/setup-go@v6.3.0
+    - name: Install Dependencies
+      run: sudo apt install opencl-headers ocl-icd-opencl-dev build-essential
+    - name: Set env
+      run: go env -w CGO_ENABLED=1  
+    - name: Build
+      run: go build
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: sleipnir-linux
+        path: sleipnir
