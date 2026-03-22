@@ -1,12 +1,24 @@
 ## Linux compile
-Possible you need these (check first)
+Dependencies
 ```
+# Debian/Ubuntu
 sudo apt install opencl-headers ocl-icd-opencl-dev
+
+# Arch/Manjaro
+sudo pacman -S opencl-headers ocl-icd
+
+# Fedora/RHEL
+sudo dnf install opencl-headers ocl-icd-devel
 ```
 Set CGO flags for opencl
 ```
 export CGO_CFLAGS="-I/usr/include"
 export CGO_LDFLAGS="-lOpenCL"
+go env -w CGO_ENABLED=1  
+```
+gcc
+```
+sudo apt install build-essential
 ```
 Build
 ```

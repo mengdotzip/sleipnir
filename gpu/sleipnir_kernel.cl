@@ -49,15 +49,33 @@ static inline void base64_encode_32(const unsigned char* input, char* output) {
 
 // Format ED25519 public key as SSH key
 static inline void format_ssh_key(const unsigned char* public_key, char* ssh_key) {
-    // Copy SSH prefix
-    for (int i = 0; i < SSH_PREFIX_LEN; i++)  {
-        ssh_key[i] = SSH_PREFIX[i];
+    // Copy the fixed 37-char prefix
+    for (int i = 0; i < SSH_PREFIX_LEN; i++) ssh_key[i] = SSH_PREFIX[i];
+
+    // The base64 group containing 'I' (last char of prefix) encodes:
+    // [0x20, pubkey[0], pubkey[1]] - but 'I' is already in the prefix,
+    // so we only output the remaining 3 chars of that group here:
+    unsigned int val = ((unsigned int)0x20 << 16)
+                     | ((unsigned int)public_key[0] << 8)
+                     | (unsigned int)public_key[1];
+    ssh_key[37] = base64_chars[(val >> 12) & 0x3F];
+    ssh_key[38] = base64_chars[(val >> 6)  & 0x3F];
+    ssh_key[39] = base64_chars[ val        & 0x3F];
+
+    // Remaining 10 full groups: pubkey[2..31]
+    int j = 40;
+    for (int i = 2; i < 32; i += 3) {
+        val = ((unsigned int)public_key[i]   << 16)
+            | ((unsigned int)public_key[i+1] <<  8)
+            |  (unsigned int)public_key[i+2];
+        ssh_key[j++] = base64_chars[(val >> 18) & 0x3F];
+        ssh_key[j++] = base64_chars[(val >> 12) & 0x3F];
+        ssh_key[j++] = base64_chars[(val >>  6) & 0x3F];
+        ssh_key[j++] = base64_chars[ val        & 0x3F];
     }
-    
-    // Base64 encode the 32-byte public key
-    base64_encode_32(public_key, &ssh_key[SSH_PREFIX_LEN]);
-    ssh_key[80] = '\0';
+    ssh_key[80] = 0;
 }
+
 
 
 static inline char to_lowercase(char c) {
@@ -67,70 +85,60 @@ static inline char to_lowercase(char c) {
     return c;
 }
 
-static inline bool check_ssh_pattern(const char* ssh_key,__global char* pattern, int pattern_length, int location, int ignore_case) {
-    if (ssh_key[0] == '\0') return false; 
+static inline bool check_ssh_patterns(
+    const char* ssh_key,
+    __global char* all_patterns,
+    __global unsigned char* pattern_lengths,
+    int num_patterns,
+    int location,
+    int ignore_case
+) {
     const int SSH_ED25519_KEY_LENGTH = 80;
-    if (location == 2){ //end
-        const int SSH_START = SSH_ED25519_KEY_LENGTH - pattern_length;
+    int pattern_offset = 0;
 
-        for (int j = 0; j < pattern_length; j++) {
+    for (int p = 0; p < num_patterns; p++) {
+        int pattern_length = pattern_lengths[p];  // Simple byte read!
+        bool matches = true;
 
-        char key_char = ssh_key[SSH_START + j];
-        char pattern_char = pattern[j];
-
-        if (ignore_case) {
-                key_char = to_lowercase(key_char);
-        }
-
-        if (key_char != pattern_char) {
-                return false;
-        }
-        }
-        return true;
-    } 
-    else if (location == 0){ //anywhere
-        for (int j = SSH_PREFIX_LEN; j < 80; j++) {
-            for (int i = 0; i < pattern_length; i++) {
-                char key_char = ssh_key[j + i];
-                char pattern_char = pattern[i];
-
-                if (ignore_case) {
-                    key_char = to_lowercase(key_char);
-                }
-
-                if (key_char != pattern_char) {
-                    break;
-                }
-
-                if (i == pattern_length - 1){
-                    return true;
-                }
+        if (location == 2) { // end
+            int start = SSH_ED25519_KEY_LENGTH - pattern_length;
+            for (int j = 0; j < pattern_length; j++) {
+                char key_char = ssh_key[start + j];
+                char pat_char = all_patterns[pattern_offset + j];
+                if (ignore_case) key_char = to_lowercase(key_char);
+                if (key_char != pat_char) { matches = false; break; }
             }
         }
-        return false;
+        else if (location == 1) { // start
+            for (int j = 0; j < pattern_length; j++) {
+                char key_char = ssh_key[SSH_PREFIX_LEN + j];
+                char pat_char = all_patterns[pattern_offset + j];
+                if (ignore_case) key_char = to_lowercase(key_char);
+                if (key_char != pat_char) { matches = false; break; }
+            }
+        }
+        else if (location == 0) { // anywhere
+            matches = false;
+            for (int start = SSH_PREFIX_LEN; start <= SSH_ED25519_KEY_LENGTH - pattern_length; start++) {
+                bool found = true;
+                for (int j = 0; j < pattern_length; j++) {
+                    char key_char = ssh_key[start + j];
+                    char pat_char = all_patterns[pattern_offset + j];
+                    if (ignore_case) key_char = to_lowercase(key_char);
+                    if (key_char != pat_char) { found = false; break; }
+                }
+                if (found) { matches = true; break; }
+            }
+        }
 
+        if (matches) return true;  // Any pattern matches = done!
+
+        pattern_offset += pattern_length;  // Move to next pattern
     }
-    else if (location == 1){ //start
-        const int SSH_START = SSH_PREFIX_LEN;
-
-        for (int j = 0; j < pattern_length; j++) {
-
-            char key_char = ssh_key[SSH_START + j];
-            char pattern_char = pattern[j];
-
-            if (ignore_case) {
-                key_char = to_lowercase(key_char);
-            }
-
-            if (key_char != pattern_char) {
-                    return false;
-            }
-        }
-        return true;
-    } 
 
     return false;
 }
+
 
 /*
 r = p + q
@@ -3736,12 +3744,13 @@ void ed25519_create_keypair(unsigned char *public_key,
 __kernel void sleipnir_ed25519_keygen(
     __global unsigned char* seeds,
     __global unsigned char* found_public_keys,
-    __global unsigned char*found_private_keys,
+    __global unsigned char* found_private_keys,
     __global int* match_count,
-    __global char* pattern,
+    __global char* all_patterns,          // NEW: replaces old "pattern"
+    __global unsigned char* pattern_lengths, // NEW: replaces old "pattern_length"
     int batch_size,
-    int pattern_length,
-    int location,       // 0=anywhere, 1=start, 2=end
+    int num_patterns,                     // NEW: replaces old nothing
+    int location,
     int ignore_case
 ) {
     int idx = get_global_id(0);
@@ -3764,20 +3773,22 @@ __kernel void sleipnir_ed25519_keygen(
     format_ssh_key(public_key, ssh_key);
     
 
-    if (check_ssh_pattern(ssh_key,pattern,pattern_length,location,ignore_case)) {
-        int slot = atomic_inc(match_count);
+    if (check_ssh_patterns(ssh_key, all_patterns, pattern_lengths, num_patterns, location, ignore_case)) {
+    int slot = atomic_inc(match_count);
         if (slot < batch_size) {
-        
-            // Store the SSH key that actually matched the pattern
-            for (int i = 0; i < 80; i++) {
-                found_public_keys[slot * 80 + i] = ssh_key[i];
+            // Store public key (32 bytes)
+            for (int i = 0; i < 32; i++) {
+                found_public_keys[slot * 32 + i] = public_key[i];
             }
-
-            for (int i = 0; i < 64; i++) {
-                found_private_keys[slot * 64 + i] = private_key[i];
+        
+            // Store [seed(32) || public_key(32)] = Go's ed25519.PrivateKey format
+            for (int i = 0; i < 32; i++) {
+                found_private_keys[slot * 64 + i] = keybase[i];       // seed
+                found_private_keys[slot * 64 + 32 + i] = public_key[i]; // public key
             }
         }
     }
+
     
 }
 
