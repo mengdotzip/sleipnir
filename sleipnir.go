@@ -28,7 +28,7 @@ type Config struct {
 	BatchSize  int
 }
 
-const version string = "1.0.0"
+const version string = "1.1.1"
 
 func main() {
 

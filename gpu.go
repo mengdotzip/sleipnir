@@ -24,6 +24,12 @@ type GPUContext struct {
 	workGroupSize  uint64
 	globalWorkSize uint64
 
+	// Pre-built pattern data written to the GPU once at init.
+	allPatterns    []byte
+	patternLengths []byte
+	// Reused across batches to avoid per-batch allocation.
+	matchCount []int32
+
 	seedsChan chan []byte
 	stopChan  chan struct{}
 }
@@ -115,6 +121,16 @@ func initGpu(config *Config) (*GPUContext, error) {
 		return nil, fmt.Errorf("failed to create pattern length buffer: %v", err)
 	}
 
+	// Write pattern data once — it never changes between batches.
+	err = cl.WriteBuffer(runner, 0, patternBuffer, allPatterns, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write pattern buffer: %v", err)
+	}
+	err = cl.WriteBuffer(runner, 0, patternLenBuffer, patternLengths, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write pattern length buffer: %v", err)
+	}
+
 	workGroupSize := uint64(256)
 	globalWorkSize := uint64((batchSize + 255) / 256 * 256)
 
@@ -129,6 +145,9 @@ func initGpu(config *Config) (*GPUContext, error) {
 		patternLenBuffer: patternLenBuffer,
 		workGroupSize:    workGroupSize,
 		globalWorkSize:   globalWorkSize,
+		allPatterns:      allPatterns,
+		patternLengths:   patternLengths,
+		matchCount:       []int32{0},
 		seedsChan:        make(chan []byte, 8),
 		stopChan:         make(chan struct{}),
 	}
@@ -161,29 +180,11 @@ func initGpu(config *Config) (*GPUContext, error) {
 }
 
 func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
-	// Build pattern buffers
-	var allPatterns []byte
-	patternLengths := []byte{}
-	for _, p := range config.Patterns {
-		if config.IgnoreCase {
-			p = strings.ToLower(p)
-		}
-		allPatterns = append(allPatterns, []byte(p)...)
-		patternLengths = append(patternLengths, byte(len(p)))
-	}
-
 	locationInt := int32(locationToInt(config.Location))
 	ignoreCaseInt := int32(0)
 	if config.IgnoreCase {
 		ignoreCaseInt = 1
 	}
-
-	/**
-	seeds := make([]byte, g.batchSize*32)
-	_, err := rand.Read(seeds)
-	if err != nil {
-		return nil, err
-	} **/
 
 	seeds := <-g.seedsChan
 
@@ -192,23 +193,13 @@ func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
 		return nil, fmt.Errorf("failed to write seeds: %v", err)
 	}
 
-	matchCount := []int32{0}
-	err = cl.WriteBuffer(g.runner, 0, g.countBuffer, matchCount, true)
+	// Reset match counter — reuse pre-allocated slice to avoid GC pressure.
+	g.matchCount[0] = 0
+	err = cl.WriteBuffer(g.runner, 0, g.countBuffer, g.matchCount, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write count: %v", err)
 	}
 
-	err = cl.WriteBuffer(g.runner, 0, g.patternBuffer, allPatterns, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write patterns: %v", err)
-	}
-
-	err = cl.WriteBuffer(g.runner, 0, g.patternLenBuffer, patternLengths, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write pattern lengths: %v", err)
-	}
-
-	// All local variables - no struct field pointers to avoid CGO issues!
 	batchSizeParam := int32(g.batchSize)
 	numPatternsParam := int32(len(config.Patterns))
 
@@ -231,12 +222,12 @@ func (g *GPUContext) findVanityKeysGPU(config *Config) (*resultFound, error) {
 		return nil, fmt.Errorf("kernel execution failed: %v", err)
 	}
 
-	err = cl.ReadBuffer(g.runner, 0, g.countBuffer, matchCount)
+	err = cl.ReadBuffer(g.runner, 0, g.countBuffer, g.matchCount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read count: %v", err)
 	}
 
-	if matchCount[0] == 0 {
+	if g.matchCount[0] == 0 {
 		return nil, nil
 	}
 
