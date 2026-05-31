@@ -73,7 +73,11 @@ func initGpu(config *Config) (*GPUContext, error) {
 		return nil, fmt.Errorf("failed to load kernel: %v", err)
 	}
 
-	err = runner.CompileKernels([]string{kernelSource}, []string{"sleipnir_ed25519_keygen"}, "")
+	// Force OpenCL 1.2 mode so __generic is not a protected keyword and our
+	// #define __generic (in the kernel header) can strip it as intended.
+	// All fe/ge_precomp variables are in private address space, so CL1.2
+	// semantics are fully correct. NVIDIA also supports -cl-std=CL1.2.
+	err = runner.CompileKernels([]string{kernelSource}, []string{"sleipnir_ed25519_keygen"}, "-cl-std=CL1.2")
 	if err != nil {
 		return nil, fmt.Errorf("kernel compilation failed: %v", err)
 	}

@@ -43,7 +43,6 @@ func writeKey(result *resultFound, cfg *Config) {
 	_, err = fmt.Fprintln(f, newLine)
 	if err != nil {
 		fmt.Println(err)
-		f.Close()
 		return
 	}
 }

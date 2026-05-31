@@ -2,50 +2,31 @@
 //Under the GNU license https://github.com/WincerChan/SolVanityCL/blob/master/LICENSE
 //I just altered it to fit the ssh format
 
-//#define __generic
+// __generic is an OpenCL 2.0 address-space qualifier; AMD targets OpenCL 1.2
+// so define it away to make fe_0's array parameter work as a plain pointer.
+#define __generic
+
 #ifndef NULL
 #define NULL 0L
 #endif
 
+// Guard typedefs so they don't clash with AMD OpenCL headers that may already
+// define these via <stdint.h>.
+#ifndef int32_t
 typedef int int32_t;
+#endif
+#ifndef uint64_t
 typedef unsigned long uint64_t;
+#endif
+#ifndef int64_t
 typedef long int64_t;
+#endif
+
 typedef int32_t fe[10];
 
-bool CASE_SENSITIVE = false;
-
-#define ADJUST_INPUT_CASE(x) \
-(CASE_SENSITIVE ? (x) : \
-    ((x) - ((x) > 32) * \
-        (((unsigned int) 67091966 >> ((x) & 31)) & 1) * \
-        (24 + (((unsigned int) 67079168 >> ((x) & 31)) & 1))))
-
-constant int SSH_PREFIX_LEN = 37;
-constant char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
-
-// Add after your constants but before the main kernel:
-
-// Base64 encoding for SSH keys
-static inline void base64_encode_32(const unsigned char* input, char* output) {
-    int i, j = 0;
-    for (i = 0; i < 32; i += 3) {
-        unsigned int val = 0;
-        int pad = 0;
-        
-        val |= (unsigned int)input[i] << 16;
-        if (i + 1 < 32) val |= (unsigned int)input[i + 1] << 8;
-        else pad++;
-        if (i + 2 < 32) val |= (unsigned int)input[i + 2];
-        else pad++;
-        
-        output[j++] = base64_chars[(val >> 18) & 0x3F];
-        output[j++] = base64_chars[(val >> 12) & 0x3F];
-        output[j++] = (pad > 1) ? '=' : base64_chars[(val >> 6) & 0x3F];
-        output[j++] = (pad > 0) ? '=' : base64_chars[val & 0x3F];
-    }
-    output[43] = '\0';
-}
+__constant int SSH_PREFIX_LEN = 37;
+__constant char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+__constant char SSH_PREFIX[] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI";
 
 // Format ED25519 public key as SSH key
 static inline void format_ssh_key(const unsigned char* public_key, char* ssh_key) {
@@ -188,7 +169,7 @@ void fe_0(__generic fe h) {
 }
 
 /* base[i][j] = (j+1)*256^i*B */
-constant ge_precomp base[32][8] = {
+__constant ge_precomp base[32][8] = {
     {
         {
             {25967493, -14356035, 29566456, 3660896, -12694345, 4014787,
@@ -2756,7 +2737,7 @@ void fe_1(__generic fe h) {
     Preconditions: b in {0,1}.
 */
 inline __attribute__((always_inline))
-void fe_cmov__constant(__generic fe f, constant fe g, unsigned int b) {
+void fe_cmov__constant(__generic fe f, __constant fe g, unsigned int b) {
   int32_t f0 = f[0];
   int32_t f1 = f[1];
   int32_t f2 = f[2];
@@ -3505,7 +3486,7 @@ static void cmov(ge_precomp *t, const ge_precomp *u, unsigned char b) {
 }
 
 inline __attribute__((always_inline))
-static void cmov__constant(ge_precomp *t, constant ge_precomp *u,
+static void cmov__constant(ge_precomp *t, __constant ge_precomp *u,
                            unsigned char b) {
   fe_cmov__constant(t->yplusx, u->yplusx, b);
   fe_cmov__constant(t->yminusx, u->yminusx, b);
@@ -3760,7 +3741,6 @@ __kernel void sleipnir_ed25519_keygen(
     unsigned char public_key[32] __attribute__((aligned(4)));
     unsigned char private_key[64];
     char ssh_key[128];
-    CASE_SENSITIVE = true;
 
     // Copy seed from global memory
     for (int i = 0; i < 32; i++) {

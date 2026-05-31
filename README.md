@@ -1,26 +1,34 @@
 # Sleipnir - Super Fast Vanity SSH Key Generator
 
-Sleipnir is a super fast cross-platform vanity SSH key generator written in Go, capable of generating **26,000,000+** ED25519 keys per second on modern hardware using both CPU and GPU processing. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH keys.
+Sleipnir is a cross-platform vanity SSH key generator written in Go, capable of generating **26,000,000+** ED25519 keys per second on modern hardware using both CPU and GPU processing. Named after Odin's eight-legged horse from Norse mythology, Sleipnir gallops through keyspace at incredible speeds to find your perfect vanity SSH key.
 
 ## Compiling
-Please checkout the [DOCS](docs/compiling.md) for information on windows and Linux compiles.
+See [docs/compiling.md](docs/compiling.md) for Linux, Windows, and cross-compilation instructions.
 
 ## Usage
 
-Basic Usage
 ```bash
 # Find "cool" anywhere in the SSH key
 ./sleipnir -pattern cool
 
-# Find key ending with "1337" OR "meng" OR "github"
+# Find a key ending with "1337", "meng", or "github"
 ./sleipnir -pattern 1337,meng,github -location end
 
-# Use the gpu and cpu to find keys
-./sleipnir -pattern mari -location end -gpu
+# GPU-only mode (recommended when using a GPU — see note below)
+./sleipnir -pattern mari -location end -gpu -cpu=false -batch-size 33554432
 ```
 
-For **more** usage examples please go to the [DOCS](docs/usage.md)
+For more examples see [docs/usage.md](docs/usage.md).
 
+> [!TIP]
+> **When using a GPU, disable the CPU workers** (`-cpu=false`). A modern GPU is 20–30× faster
+> than the CPU, so running CPU workers alongside it gives negligible extra throughput — and the
+> CPU still needs headroom to feed the GPU with fresh random seeds. Tune `-batch-size` to find
+> the sweet spot for your card (double or halve the default until keys/s peaks).
+
+> [!NOTE]
+> AMD GPU support requires the ROCm or AMDGPU-PRO OpenCL runtime.
+> See [docs/compiling.md](docs/compiling.md) for installation instructions.
 
 ## Example
 
@@ -47,29 +55,30 @@ Removed so nobody would actually use this key :p
 Public Key:
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII44C87jrgvZi/pkNUVpwb0jlnUGXkiUu+/RMS5wMENG
 All goroutines closed successfully
-
 ```
-> [!NOTE]  
-> If you want the PKCS#8  format instead of OpenSSH you will have to run sleipnir with -verbose
+
+> [!NOTE]
+> Add `-verbose` to also print the PKCS#8 format private key.
 
 ## Tests
-Benchmark the speed of the ssh keygen per core and the Sleipnir keys/s:
-```
+
+Benchmark raw key generation speed and overall Sleipnir throughput:
+```bash
 go test -bench .
 ```
 
-Test if we are generating valid ssh keys:
-```
+Test that generated keys are valid:
+```bash
 go test -v
 ```
 
-##### Flagegraph:
-Run sleipnir for a bit with the **-pprof** flag
-Then run the following command:
-```
+### Flamegraph
+
+Run Sleipnir with `-pprof`, then:
+```bash
 go tool pprof -http=:8000 sleipnir.pprof
 ```
-Visit http://localhost:8000/ui/flamegraph for the graph.
+Visit http://localhost:8000/ui/flamegraph
 
 ## Benchmarks
 
@@ -81,11 +90,13 @@ Visit http://localhost:8000/ui/flamegraph for the graph.
 | GeForce RTX 3060 Ti 8GB | ~12.5M | Windows 11 23H2 | pre-1.0.0 | ?          |
 | GeForce RTX 4070 12GB   | ~9.5M  | Debian Linux 12 | pre-1.0.0 | ?          |
 
-| CPU                  |keys/s | OS              | Version   |
-|:---------------------|:-----:|:----------------|-----------|
-| Intel Core i7-13700K | ~1M   | Windows 11 23H2 | pre-1.0.0 |
-| AMD Ryzen 9 7950X    | ~920k | Fedora Linux 42 | pre-1.0.0 |
-| AMD Ryzen 7 7800x3d  | ~570K | Fedora Linux 42 | pre-1.0.0 |
-| AMD Ryzen 5 7600X    | ~500K | Debian Linux 12 | pre-1.0.0 |
-| Apple M1             | ~280k | macOS 26        | pre-1.0.0 |
-| lx2160a A72          | ~143K | Fedora Linux 42 | pre-1.0.0 |
+| CPU                  | keys/s | OS              | Version   |
+|:---------------------|:------:|:----------------|-----------|
+| Intel Core i7-13700K | ~1M    | Windows 11 23H2 | pre-1.0.0 |
+| AMD Ryzen 9 7950X    | ~920k  | Fedora Linux 42 | pre-1.0.0 |
+| AMD Ryzen 7 7800x3d  | ~570K  | Fedora Linux 42 | pre-1.0.0 |
+| AMD Ryzen 5 7600X    | ~500K  | Debian Linux 12 | pre-1.0.0 |
+| Apple M1             | ~280k  | macOS 26        | pre-1.0.0 |
+| lx2160a A72          | ~143K  | Fedora Linux 42 | pre-1.0.0 |
+
+Have a result to share? Open a PR or issue!

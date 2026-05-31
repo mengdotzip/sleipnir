@@ -82,8 +82,12 @@ func checkKey(pub string, cfg *Config) bool {
 	// This should save time (i hope) :)
 	switch cfg.Location {
 	case "anywhere":
+		// Skip the fixed 25-char prefix "AAAAC3NzaC1lZDI1NTE5AAAAI" — it never
+		// changes, so matching inside it gives spurious hits and mismatches GPU
+		// behaviour (which also skips the prefix).
+		pubVar := pub[25:]
 		for _, pattern := range cfg.Patterns {
-			if strings.Contains(pub, pattern) {
+			if strings.Contains(pubVar, pattern) {
 				return true
 			}
 		}

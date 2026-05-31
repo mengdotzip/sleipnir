@@ -25,7 +25,6 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 			priv, pub, err := generateED25519Key()
 			if err != nil {
 				fmt.Println(err)
-				ctx.Done()
 				os.Exit(1)
 			}
 
@@ -34,13 +33,11 @@ func cpuGen(ctx context.Context, cfg *Config, result chan *resultFound, wg *sync
 				privString, err := privateKeyToPEM(priv)
 				if err != nil {
 					fmt.Println(err)
-					ctx.Done()
 					os.Exit(1)
 				}
 				privOpenSSH, err := privateKeyToOpenSSH(priv, "")
 				if err != nil {
 					fmt.Println(err)
-					ctx.Done()
 					os.Exit(1)
 				}
 
